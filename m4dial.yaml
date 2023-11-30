@@ -199,7 +199,7 @@ display:
         if (id(dimmersensor).state == "ON")
         {
           it.start_clipping(0, (id(dimmersensor_brightness).state * -1) + 255, 250, 250);
-          it.filled_circle(screenwidth, screenheight, 255, my_light_yellow);
+          it.filled_circle(halfscreenwidth, screenheight, 255, my_light_yellow);
           it.end_clipping();
         }
         it.image(halfscreenwidth, halfscreenheight - 55, downlighticon, ImageAlign::TOP_CENTER);
