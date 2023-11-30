@@ -33,7 +33,15 @@ i2c:
   - id: bus_porta
     sda: 13
     scl: 15
-#  touchscreen interrupt: 14
+#  interrupt: 14
+
+touchscreen:
+  - platform: lilygo_t5_47
+    interrupt_pin: GPIO14
+    i2c_id: bus_internal
+    id: my_touchscreen
+    on_touch:
+      - logger.log: "touched"
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -184,79 +192,91 @@ display:
   pages:
     - id: page1
       lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
         if (id(dimmersensor).state == "ON")
         {
           it.start_clipping(0, (id(dimmersensor_brightness).state * -1) + 255, 250, 250);
-          it.filled_circle(it.get_width() / 2, it.get_height(), 255, my_light_yellow);
+          it.filled_circle(halfscreenwidth, screenheight, 255, my_light_yellow);
           it.end_clipping();
         }
-        it.image(it.get_width() / 2, it.get_height() / 2 - 55, downlighticon, ImageAlign::TOP_CENTER);
-        it.printf(it.get_width() / 2, it.get_height() / 2 + 35, id(roboto24), TextAlign::TOP_CENTER, "%s", id(dimmersensor).state.c_str()); 
-        it.filled_circle(it.get_width() / 2 -12, 225, 3);
-        it.circle(it.get_width() / 2, 225, 3);
-        it.circle(it.get_width() / 2 +12, 225, 3);
+        it.image(halfscreenwidth, halfscreenheight - 55, downlighticon, ImageAlign::TOP_CENTER);
+        it.printf(halfscreenwidth, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%s", id(dimmersensor).state.c_str()); 
+        it.filled_circle(halfscreenwidth -12, 225, 3);
+        it.circle(halfscreenwidth, 225, 3);
+        it.circle(halfscreenwidth +12, 225, 3);
     - id: page2
       lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
         if (id(climatedevice).state == "cool")
         {
           // cooling
-          it.filled_circle(it.get_width() / 2, it.get_height() / 2, 120, my_light_blue);
-          it.image(it.get_width() / 2, it.get_height() / 2 + -55, ac_cool_80, ImageAlign::TOP_CENTER); 
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_blue);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_cool_80, ImageAlign::TOP_CENTER); 
         }
         else if (id(climatedevice).state == "heat")
         {
           // heating
-          it.filled_circle(it.get_width() / 2, it.get_height() / 2, 120, my_light_red);
-          it.image(it.get_width() / 2, it.get_height() / 2 + -55, ac_heat_80, ImageAlign::TOP_CENTER);
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_red);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_heat_80, ImageAlign::TOP_CENTER);
         }
         else if (id(climatedevice).state == "auto")
         {
           // auto heat or cool
-          it.filled_circle(it.get_width() / 2, it.get_height() / 2, 120, my_light_orange);
-          it.image(it.get_width() / 2, it.get_height() / 2 + -55, ac_heatcool_80, ImageAlign::TOP_CENTER);
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_heatcool_80, ImageAlign::TOP_CENTER);
         }
         else if (id(climatedevice).state == "fan_only")
         {
           // fan only
-          it.filled_circle(it.get_width() / 2, it.get_height() / 2, 120, my_light_orange);
-          it.image(it.get_width() / 2, it.get_height() / 2 + -55, ac_fan_80, ImageAlign::TOP_CENTER);
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_fan_80, ImageAlign::TOP_CENTER);
         }
         else if (id(climatedevice).state == "dry")
         {
           // dry
-          it.filled_circle(it.get_width() / 2, it.get_height() / 2, 120, my_green);
-          // it.image(it.get_width() / 2 - 80, it.get_height() / 2 - 20, ac_dry_40, ImageAlign::TOP_CENTER);
-          it.image(it.get_width() / 2, it.get_height() / 2 + -55, ac_dry_80, ImageAlign::TOP_CENTER);
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_green);
+          // it.image(halfscreenwidth - 80, halfscreenheight - 20, ac_dry_40, ImageAlign::TOP_CENTER);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_dry_80, ImageAlign::TOP_CENTER);
         }
         else if (id(climatedevice).state == "off")
         {
           // off
-          it.image(it.get_width() / 2, it.get_height() / 2 + -55, power_off_icon_80, ImageAlign::TOP_CENTER);
+          it.image(halfscreenwidth, halfscreenheight - 55, power_off_icon_80, ImageAlign::TOP_CENTER);
         }
-        it.printf(it.get_width() / 2, it.get_height() / 2 - 95, id(roboto24), TextAlign::TOP_CENTER, "Air-Con");
-        it.printf(it.get_width() / 2 + 10, it.get_height() / 2 + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_setpoint).state); 
-        it.printf(it.get_width() / 2 + 10, it.get_height() / 2 + 65, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_currenttemp).state); 
-        it.line(it.get_width() / 2 - 40, it.get_height() / 2 + 65, it.get_width() / 2 + 40, it.get_height() / 2 + 65);
-        it.image(it.get_width() / 2 - 30, it.get_height() / 2 + 40, temp_current_icon, ImageAlign::TOP_CENTER);
-        it.image(it.get_width() / 2 - 30, it.get_height() / 2 + 70, temp_target_icon, ImageAlign::TOP_CENTER);
-        it.circle(it.get_width() / 2 -12, 225, 3);
-        it.filled_circle(it.get_width() / 2, 225, 3);
-        it.circle(it.get_width() / 2 +12, 225, 3);
+        it.printf(halfscreenwidth, halfscreenheight - 95, id(roboto24), TextAlign::TOP_CENTER, "Air-Con");
+        it.printf(halfscreenwidth + 10, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_setpoint).state); 
+        it.printf(halfscreenwidth + 10, halfscreenheight + 65, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_currenttemp).state); 
+        it.line(halfscreenwidth - 40, halfscreenheight + 65, it.get_width() / 2 + 40, it.get_height() / 2 + 65);
+        it.image(halfscreenwidth - 30, halfscreenheight + 40, temp_current_icon, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth - 30, halfscreenheight + 70, temp_target_icon, ImageAlign::TOP_CENTER);
+        it.circle(halfscreenwidth -12, 225, 3);
+        it.filled_circle(halfscreenwidth, 225, 3);
+        it.circle(halfscreenwidth +12, 225, 3);
     - id: page3
       lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
         if (id(mediaplayermute).state == "on")
         {
-          it.image(it.get_width() / 2 + 80, it.get_height() / 2 -25, volume_mute, ImageAlign::TOP_CENTER);
+          it.image(halfscreenwidth + 80, halfscreenwidth -25, volume_mute, ImageAlign::TOP_CENTER);
         }
         else
         {
-          it.image(it.get_width() / 2 + 80, it.get_height() / 2 -25, volume_notmute, ImageAlign::TOP_CENTER);
+          it.image(halfscreenwidth + 80, halfscreenheight -25, volume_notmute, ImageAlign::TOP_CENTER);
         }
-        it.image(it.get_width() / 2, it.get_height() / 2 - 55, volumeknob, ImageAlign::TOP_CENTER);
-        it.printf(it.get_width() / 2, it.get_height() / 2 + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f%%", id(beam_volume).state * 100); 
-        it.circle(it.get_width() / 2 -12, 225, 3);
-        it.circle(it.get_width() / 2, 225, 3);
-        it.filled_circle(it.get_width() / 2 +12, 225, 3);
+        it.image(halfscreenwidth, halfscreenheight - 55, volumeknob, ImageAlign::TOP_CENTER);
+        it.printf(halfscreenwidth, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f%%", id(beam_volume).state * 100); 
+        it.circle(halfscreenwidth -12, 225, 3);
+        it.circle(halfscreenwidth, 225, 3);
+        it.filled_circle(halfscreenwidth +12, 225, 3);
   on_page_change:
       - to: page1
         then:
