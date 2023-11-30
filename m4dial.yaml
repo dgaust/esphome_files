@@ -1,7 +1,14 @@
 esphome:
   name: m4dial
   friendly_name: M4Dial
+  # libraries:
+  # - Wire
+  # - https://github.com/fablabnbg/TRGBArduinoSupport#v0.0.4
+ 
 
+  # BEEP GPIO3
+  # RGBLED GPIO21
+  
 globals:
   - id: screenwidth
     type: int
@@ -20,10 +27,21 @@ external_components:
     components: [ gc9a01 ]
 
 i2c:
-  sda: GPIO12
-  scl: GPIO14
-  id: bus_a
-  #interrupt: 16
+  - id: bus_internal
+    sda: GPIO11
+    scl: GPIO12
+  - id: bus_porta
+    sda: 13
+    scl: 15
+#  interrupt: 14
+
+touchscreen:
+  - platform: lilygo_t5_47
+    interrupt_pin: GPIO14
+    i2c_id: bus_internal
+    id: my_touchscreen
+    on_touch:
+      - logger.log: "touched"
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -324,7 +342,6 @@ binary_sensor:
                       entity_id: media_player.living_room
                       is_volume_muted: 'false'
               
-
   - platform: ld2410
     has_target:
       name: Presence
@@ -436,6 +453,36 @@ sensor:
     attribute: temperature
     on_value:
       - component.update: my_lcd
+  - platform: homeassistant
+    name: "Room Lux Sensor"
+    id: luxsensor
+    entity_id: sensor.sauron_illuminance
+    on_value:
+      - logger.log: 
+          format: "The illumincance sensor reports value %.0f"
+          args: [ 'id(luxsensor).state' ]
+      - lambda: |- 
+          float lux = id(luxsensor).state;
+          if (lux < 15) 
+          { 
+            id(oledbacklight).set_level(0.1);
+          }
+          else if (lux < 50)
+          {
+            id(oledbacklight).set_level(0.3);
+          }
+          else if (lux < 125)
+          {
+            id(oledbacklight).set_level(0.5);
+          }
+          else if (lux < 200)
+          {
+            id(oledbacklight).set_level(0.6);
+          }
+          else
+          {
+            id(oledbacklight).set_level(1);
+          }
 
 light:
   - platform: monochromatic
@@ -447,8 +494,11 @@ light:
 output:
   - id: oledbacklight
     platform: ledc
-    pin: GPIO9
-
+    # pin: GPIO9
+    pin: GPIO21
+    max_power: 1
+    min_power: 0
+    
 switch:
   - platform: ld2410
     engineering_mode:
