@@ -33,15 +33,7 @@ i2c:
   - id: bus_porta
     sda: 13
     scl: 15
-#  interrupt: 14
-
-touchscreen:
-  - platform: lilygo_t5_47
-    interrupt_pin: GPIO14
-    i2c_id: bus_internal
-    id: my_touchscreen
-    on_touch:
-      - logger.log: "touched"
+#  touchscreen interrupt: 14
 
 esp32:
   board: esp32-s3-devkitc-1
