@@ -3,7 +3,6 @@ esphome:
   friendly_name: M4Dial
 
   # BEEP GPIO3
-  # RGBLED GPIO21
   
 globals:
   - id: screenwidth
