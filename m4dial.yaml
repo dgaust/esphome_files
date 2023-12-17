@@ -1,10 +1,6 @@
 esphome:
   name: m4dial
   friendly_name: M4Dial
-  # libraries:
-  # - Wire
-  # - https://github.com/fablabnbg/TRGBArduinoSupport#v0.0.4
- 
 
   # BEEP GPIO3
   # RGBLED GPIO21
@@ -35,14 +31,6 @@ i2c:
     scl: 15
 #  interrupt: 14
 
-touchscreen:
-  - platform: lilygo_t5_47
-    interrupt_pin: GPIO14
-    i2c_id: bus_internal
-    id: my_touchscreen
-    on_touch:
-      - logger.log: "touched"
-
 esp32:
   board: esp32-s3-devkitc-1
   framework:
@@ -51,6 +39,22 @@ esp32:
 # Enable logging
 logger:
   level: DEBUG
+
+rc522_i2c:
+  i2c_id:  bus_internal
+  address: 0x28
+  on_tag:
+    then:
+      - logger.log: "scanned"
+      - homeassistant.tag_scanned: !lambda 'return x;'
+
+touchscreen:
+  - platform: lilygo_t5_47
+    interrupt_pin: GPIO14
+    i2c_id: bus_internal
+    id: my_touchscreen
+    on_touch:
+      - logger.log: "touched"
 
 color:
   - id: my_red
@@ -188,7 +192,7 @@ display:
   id: my_lcd
   cs_pin: GPIO7
   dc_pin: GPIO4
-  rotation: 180
+  rotation: 90
   pages:
     - id: page1
       lambda: |-
@@ -506,8 +510,8 @@ light:
 output:
   - id: oledbacklight
     platform: ledc
-    # pin: GPIO9
-    pin: GPIO21
+    pin: GPIO9
+    #pin: GPIO21
     max_power: 1
     min_power: 0
     
