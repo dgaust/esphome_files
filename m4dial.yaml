@@ -1,8 +1,20 @@
 esphome:
   name: m4dial
   friendly_name: M4Dial
-
+  on_boot:
+    then:
+     # read the RTC time once when the system boots
+      - pcf8563.read_time: my_time
+      - light.turn_on: backlight
+      - text_sensor.template.publish:
+          id: template_text
+          state: !lambda |-
+              char str[17];
+              time_t currTime = id(my_time).now().timestamp;
+              strftime(str, sizeof(str), "%Y-%M-%d %H:%M", localtime(&currTime));
+              return  { str };
   # BEEP GPIO3
+  # RGBLED GPIO21
   
 globals:
   - id: screenwidth
@@ -18,17 +30,37 @@ globals:
     initial_value: '100'
 
 external_components:
-  - source: github://the-smart-home-maker/esphome-4cello@gc9a01
+  - source: github://dgaust/esphome@gc9a01
     components: [ gc9a01 ]
+    refresh: 0s
 
 i2c:
   - id: bus_internal
     sda: GPIO11
     scl: GPIO12
-  - id: bus_porta
-    sda: 13
-    scl: 15
-#  interrupt: 14
+    scan: False
+    frequency: 400kHz
+#  - id: bus_porta
+#    sda: 13
+#    scl: 15
+#  interrupt: 16
+
+time:
+  - platform: pcf8563
+    id: my_time
+    address: 0x38
+    update_interval: never
+  - platform: homeassistant
+    on_time_sync:
+      then:
+        - pcf8563.write_time: my_time
+        - text_sensor.template.publish:
+            id: template_text
+            state: !lambda |-
+              char str[17];
+              time_t currTime = id(my_time).now().timestamp;
+              strftime(str, sizeof(str), "%Y-%m-%d %H:%M", localtime(&currTime));
+              return  { str };
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -46,14 +78,6 @@ rc522_i2c:
     then:
       - logger.log: "scanned"
       - homeassistant.tag_scanned: !lambda 'return x;'
-
-touchscreen:
-  - platform: lilygo_t5_47
-    interrupt_pin: GPIO14
-    i2c_id: bus_internal
-    id: my_touchscreen
-    on_touch:
-      - logger.log: "touched"
 
 color:
   - id: my_red
@@ -135,6 +159,9 @@ image:
   - file: mdi:knob
     id: volumeknob
     resize: 80x80
+  - file: mdi:information
+    id: infoicon
+    resize: 40x40
 
 font:
   - file: "fonts/arial.ttf"
@@ -164,6 +191,10 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  manual_ip:
+    static_ip: 10.0.0.237
+    gateway: 10.0.0.1
+    subnet: 255.255.255.0
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
@@ -207,9 +238,10 @@ display:
         }
         it.image(halfscreenwidth, halfscreenheight - 55, downlighticon, ImageAlign::TOP_CENTER);
         it.printf(halfscreenwidth, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%s", id(dimmersensor).state.c_str()); 
-        it.filled_circle(halfscreenwidth -12, 225, 3);
-        it.circle(halfscreenwidth, 225, 3);
-        it.circle(halfscreenwidth +12, 225, 3);
+        it.filled_circle(halfscreenwidth - 18, 225, 3);
+        it.circle(halfscreenwidth -6, 225, 3);
+        it.circle(halfscreenwidth +6, 225, 3);
+        it.circle(halfscreenwidth +18, 225, 3);
     - id: page2
       lambda: |-
         float screenheight = it.get_height();
@@ -258,9 +290,13 @@ display:
         it.line(halfscreenwidth - 40, halfscreenheight + 65, it.get_width() / 2 + 40, it.get_height() / 2 + 65);
         it.image(halfscreenwidth - 30, halfscreenheight + 40, temp_current_icon, ImageAlign::TOP_CENTER);
         it.image(halfscreenwidth - 30, halfscreenheight + 70, temp_target_icon, ImageAlign::TOP_CENTER);
-        it.circle(halfscreenwidth -12, 225, 3);
-        it.filled_circle(halfscreenwidth, 225, 3);
-        it.circle(halfscreenwidth +12, 225, 3);
+        
+        it.circle(halfscreenwidth - 18, 225, 3);
+        it.filled_circle(halfscreenwidth -6, 225, 3);
+        it.circle(halfscreenwidth +6, 225, 3);
+        it.circle(halfscreenwidth +18, 225, 3);
+
+
     - id: page3
       lambda: |-
         float screenheight = it.get_height();
@@ -277,9 +313,22 @@ display:
         }
         it.image(halfscreenwidth, halfscreenheight - 55, volumeknob, ImageAlign::TOP_CENTER);
         it.printf(halfscreenwidth, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f%%", id(beam_volume).state * 100); 
-        it.circle(halfscreenwidth -12, 225, 3);
-        it.circle(halfscreenwidth, 225, 3);
-        it.filled_circle(halfscreenwidth +12, 225, 3);
+        it.circle(halfscreenwidth - 18, 225, 3);
+        it.circle(halfscreenwidth -6, 225, 3);
+        it.filled_circle(halfscreenwidth +6, 225, 3);
+        it.circle(halfscreenwidth +18, 225, 3);
+    - id: page4
+      lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
+        it.image(halfscreenwidth, halfscreenheight - 55, infoicon, ImageAlign::TOP_CENTER);
+        it.printf(halfscreenwidth, halfscreenheight + 0, id(roboto20), TextAlign::TOP_CENTER, "IP: %s", id(espip).state.c_str()); 
+        it.circle(halfscreenwidth - 18, 225, 3);
+        it.circle(halfscreenwidth -6, 225, 3);
+        it.circle(halfscreenwidth +6, 225, 3);
+        it.filled_circle(halfscreenwidth +18, 225, 3);
   on_page_change:
       - to: page1
         then:
@@ -552,3 +601,10 @@ text_sensor:
     on_value:
       then:
         - component.update: my_lcd
+  - platform: template
+    name: "RTC Sensor"
+    id: template_text
+  - platform: wifi_info
+    ip_address:
+      name: ESP IP Address
+      id: espip
