@@ -163,7 +163,7 @@ image:
     resize: 40x40
   - file: mdi:air-filter
     id: zoneicon
-    resize: 20x20
+    resize: 25x25
 
 font:
   - file: "fonts/arial.ttf"
@@ -290,7 +290,7 @@ display:
         it.printf(halfscreenwidth + 10, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_setpoint).state); 
         it.printf(halfscreenwidth + 10, halfscreenheight + 65, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_currenttemp).state); 
         
-        it.image(halfscreenwidth - 95, halfscreenheight +1, zoneicon, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth - 95, halfscreenheight - 2, zoneicon, ImageAlign::TOP_CENTER);
         it.printf(halfscreenwidth - 75, halfscreenheight, id(roboto20), TextAlign::TOP_CENTER, "%s", id(zones_open).state.c_str()); 
         it.line(halfscreenwidth - 40, halfscreenheight + 65, it.get_width() / 2 + 40, it.get_height() / 2 + 65);
         it.image(halfscreenwidth - 30, halfscreenheight + 40, temp_current_icon, ImageAlign::TOP_CENTER);
