@@ -76,7 +76,12 @@ rc522_i2c:
   address: 0x28
   on_tag:
     then:
+      - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
       - homeassistant.tag_scanned: !lambda 'return x;'
+
+rtttl:
+  output: my_speaker_output
+  id: my_rtttl
 
 color:
   - id: my_red
@@ -567,6 +572,9 @@ output:
     #pin: GPIO21
     max_power: 1
     min_power: 0
+  - platform: ledc
+    pin: GPIO3
+    id: my_speaker_output
     
 switch:
   - platform: ld2410
