@@ -31,7 +31,7 @@ globals:
 
 external_components:
   - source: github://dgaust/esphome@gc9a01
-    components: [ gc9a01 ]
+    components: [ gc9a01, ft3267 ]
     refresh: 0s
 
 i2c:
@@ -45,10 +45,24 @@ i2c:
 #    scl: 15
 #  interrupt: 16
 
+#ft3267_touchscreen:
+#  id: ft3267_touch
+#  address: 0x38
+#  interrupt_pin: GPIO14
+#  on_touch:
+#    then:
+#      - logger.log:
+#          format: Touch %d at (%d, %d)
+#          args: [touch.id, touch.x, touch.y]
+#      - display.page.show_next: my_lcd
+
+touchscreen:
+  platform: ft3267
+
 time:
   - platform: pcf8563
     id: my_time
-    address: 0x38
+    address: 0x51
     update_interval: never
   - platform: homeassistant
     on_time_sync:
@@ -71,6 +85,7 @@ esp32:
 logger:
   level: DEBUG
 
+
 rc522_i2c:
   i2c_id:  bus_internal
   address: 0x28
@@ -84,6 +99,10 @@ rtttl:
   id: my_rtttl
 
 color:
+  - id: black
+    hex: '000000'
+  - id: dark_green
+    hex: '013208'
   - id: my_red
     red: 100%
     green: 3%
@@ -104,6 +123,10 @@ color:
     hex: FD7F20
   - id: my_light_yellow
     hex: B58B00
+  - id: dark_blue
+    hex: '000040'
+  - id: dark_red
+    hex: '67091C'
 
 image:
   - file: mdi:volume-variant-off
@@ -169,22 +192,27 @@ image:
   - file: mdi:air-filter
     id: zoneicon
     resize: 25x25
+  - file: mdi:knob
+    id: volumeknob_60
+    resize: 60x60
+  - file: mdi:air-conditioner
+    id: airconicon_60
+    resize: 50X50
+  - file: mdi:light-recessed
+    id: downlighticon_60
+    resize: 60x60
 
 font:
-  - file: "fonts/arial.ttf"
-    id: my_font
-    size: 40
-  
-  - file: "gfonts://Roboto"
-    id: roboto16
+  - id: roboto16
+    file: "gfonts://Roboto"
     size: 16
 
-  - file: "gfonts://Roboto"
-    id: roboto20
+  - id: roboto20
+    file: "gfonts://Roboto"
     size: 20
   
-  - file: "gfonts://Roboto"
-    id: roboto24
+  - id: roboto24
+    file: "gfonts://Roboto"   
     size: 24
 
 # Enable Home Assistant API
@@ -231,6 +259,26 @@ display:
   dc_pin: GPIO4
   rotation: 90
   pages:
+    - id: MenuPage
+      lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
+
+        it.filled_rectangle(0, 0, 120, 120, my_light_orange);
+        it.filled_rectangle(120, 0, 240, 120, dark_red);   
+
+        it.filled_rectangle(0, 120, 120, 240, dark_green);   
+        it.filled_rectangle(120, 120, 240, 240, dark_blue);
+              
+        // it.line(0, halfscreenheight, screenwidth, halfscreenheight);
+        // it.line(halfscreenwidth, 0, halfscreenwidth, screenheight);
+
+        it.image(halfscreenwidth - 50, halfscreenheight - 75, airconicon_60, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth + 50, halfscreenheight + 30, airconicon_60, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth + 50, halfscreenheight - 80, downlighticon_60, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth - 50, halfscreenheight + 25, volumeknob_60, ImageAlign::TOP_CENTER);
     - id: page1
       lambda: |-
         float screenheight = it.get_height();
@@ -249,6 +297,9 @@ display:
         it.circle(halfscreenwidth -6, 225, 3);
         it.circle(halfscreenwidth +6, 225, 3);
         it.circle(halfscreenwidth +18, 225, 3);
+        it.start_clipping(0, 180, 250, 250);
+        it.filled_circle(screenwidth, screenheight, 255, dark_blue);
+        it.end_clipping();
     - id: page2
       lambda: |-
         float screenheight = it.get_height();
@@ -309,8 +360,6 @@ display:
         it.filled_circle(halfscreenwidth -6, 225, 3);
         it.circle(halfscreenwidth +6, 225, 3);
         it.circle(halfscreenwidth +18, 225, 3);
-
-
     - id: page3
       lambda: |-
         float screenheight = it.get_height();
@@ -343,6 +392,8 @@ display:
         it.circle(halfscreenwidth -6, 225, 3);
         it.circle(halfscreenwidth +6, 225, 3);
         it.filled_circle(halfscreenwidth +18, 225, 3);
+    
+      
   on_page_change:
       - to: page1
         then:
@@ -364,6 +415,47 @@ display:
           - component.update: my_lcd
 
 binary_sensor:
+  - platform: touchscreen
+    name: Top Left Touch Quadrant
+    x_min: 0
+    x_max: 119
+    y_min: 0
+    y_max: 119
+    on_press:
+      - if:
+          condition: 
+            - display.is_displaying_page: MenuPage
+          then:
+            - display.page.show: page3
+          else:
+            - display.page.show: MenuPage
+  - platform: touchscreen
+    name: Top Right Touch Quadrant
+    x_min: 120
+    x_max: 240
+    y_min: 0
+    y_max: 119
+    page_id: MenuPage
+    on_press:
+      - display.page.show: page1
+  - platform: touchscreen
+    name: Bottom Left Touch Quadrant
+    x_min: 0
+    x_max: 119
+    y_min: 120
+    y_max: 240
+    page_id: MenuPage
+    on_press:
+      - display.page.show: page3
+  - platform: touchscreen
+    name: Bottom Right Touch Quadrant
+    x_min: 120
+    x_max: 240
+    y_min: 120
+    y_max: 240
+    page_id: MenuPage
+    on_press:
+      - display.page.show: page2
   - platform: gpio
     pin: GPIO42
     name: "BacklightButton"
@@ -432,8 +524,6 @@ sensor:
   - platform: rotary_encoder
     name: "Rotary Encoder"
     id: rotaryencoder
-    max_value: 31
-    min_value: 17
     pin_a: 
       number: GPIO40
       mode:
@@ -448,11 +538,66 @@ sensor:
     #on_value:
     #  - component.update: my_lcd
     on_clockwise: 
-      - display.page.show_next: my_lcd
-      - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page1
+          then:
+            - homeassistant.service:
+                service: light.turn_on
+                data:
+                  entity_id: light.great_room_dimmer_4
+                  brightness: !lambda int brightness = id(dimmersensor_brightness).state + 35; return brightness;
+            - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page2
+          then:
+            - homeassistant.service:
+                service: climate.set_temperature
+                data:
+                  entity_id: climate.doris
+                  temperature: !lambda return (id(climatedevice_setpoint).state + 1);
+            - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page3
+          then:
+            - homeassistant.service:
+                service: media_player.volume_up
+                data:
+                  entity_id: media_player.living_room
+            - component.update: my_lcd
     on_anticlockwise:
-      - display.page.show_previous: my_lcd
-      - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page1
+          then:
+            - homeassistant.service:
+                service: light.turn_on
+                data:
+                  entity_id: light.great_room_dimmer_4
+                  brightness: !lambda int brightness = id(dimmersensor_brightness).state - 35; return brightness;
+            - component.update: my_lcd        
+      - if:
+          condition:
+            - display.is_displaying_page: page2
+          then:
+            - homeassistant.service:
+                service: climate.set_temperature
+                data:
+                  entity_id: climate.doris
+                  temperature: !lambda return (id(climatedevice_setpoint).state - 1);
+            - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page3
+          then:
+            - homeassistant.service:
+                service: media_player.volume_down
+                data:
+                  entity_id: media_player.living_room
+            - component.update: my_lcd
+
   - platform: homeassistant
     name: "Media Volume"
     id: "beam_volume"
@@ -600,7 +745,11 @@ text_sensor:
     filters:
       - to_upper:
     on_value:
-      - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page1
+          then:
+            - component.update: my_lcd
   - platform: homeassistant
     name: "Climate Device"
     id: "climatedevice"
@@ -609,22 +758,32 @@ text_sensor:
     - map:
       - heat_cool -> auto
     on_value:
-      - component.update: my_lcd 
+      - if:
+          condition:
+            - display.is_displaying_page: page2
+          then:
+            - component.update: my_lcd 
   - platform: homeassistant
     name: "Media Player Mute"
     id: "mediaplayermute"
     entity_id: media_player.living_room
     attribute: is_volume_muted
     on_value:
-      then:
-        - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page3
+          then:
+            - component.update: my_lcd
   - platform: homeassistant
     name: "Zones Open"
     id: "zones_open"
     entity_id: sensor.ac_zones_open
     on_value:
-      then:
-        - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page2
+          then:
+            - component.update: my_lcd
   - platform: template
     name: "RTC Sensor"
     id: template_text
