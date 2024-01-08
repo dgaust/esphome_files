@@ -30,8 +30,11 @@ globals:
     initial_value: '100'
 
 external_components:
+#  - source: github://bearpawmaxim/esphome@pr3625fix
+#    components: [gc9a01]
+#    refresh: 0s
   - source: github://dgaust/esphome@gc9a01
-    components: [ gc9a01, ft3267 ]
+    components: [ ft3267, gc9a01 ]
     refresh: 0s
 
 i2c:
@@ -258,6 +261,9 @@ display:
   cs_pin: GPIO7
   dc_pin: GPIO4
   rotation: 90
+  width: 240
+  height: 240
+  update_interval: 1s
   pages:
     - id: MenuPage
       lambda: |-
@@ -272,8 +278,8 @@ display:
         it.filled_rectangle(0, 120, 120, 240, dark_green);   
         it.filled_rectangle(120, 120, 240, 240, dark_blue);
               
-        // it.line(0, halfscreenheight, screenwidth, halfscreenheight);
-        // it.line(halfscreenwidth, 0, halfscreenwidth, screenheight);
+        it.line(0, halfscreenheight, screenwidth, halfscreenheight);
+        it.line(halfscreenwidth, 0, halfscreenwidth, screenheight);
 
         it.image(halfscreenwidth - 50, halfscreenheight - 75, airconicon_60, ImageAlign::TOP_CENTER);
         it.image(halfscreenwidth + 50, halfscreenheight + 30, airconicon_60, ImageAlign::TOP_CENTER);
