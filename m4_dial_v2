@@ -1,0 +1,799 @@
+esphome:
+  name: m4dial
+  friendly_name: M4Dial
+  on_boot:
+    then:
+     # read the RTC time once when the system boots
+      - pcf8563.read_time: my_time
+      - light.turn_on: backlight
+      - text_sensor.template.publish:
+          id: template_text
+          state: !lambda |-
+              char str[17];
+              time_t currTime = id(my_time).now().timestamp;
+              strftime(str, sizeof(str), "%Y-%M-%d %H:%M", localtime(&currTime));
+              return  { str };
+  # BEEP GPIO3
+  # RGBLED GPIO21
+  
+globals:
+  - id: screenwidth
+    type: int
+    restore_value: no
+  - id: max_rotary_value
+    type: int
+    restore_value: no
+    initial_value: '1'
+  - id: min_rotary_value
+    type: int
+    restore_value: no
+    initial_value: '100'
+
+external_components:
+#  - source: github://bearpawmaxim/esphome@pr3625fix
+#    components: [gc9a01]
+#    refresh: 0s
+  - source: github://dgaust/esphome@gc9a01
+    components: [ ft3267, gc9a01 ]
+    refresh: 0s
+
+i2c:
+  - id: bus_internal
+    sda: GPIO11
+    scl: GPIO12
+    scan: False
+    frequency: 400kHz
+#  - id: bus_porta
+#    sda: 13
+#    scl: 15
+#  interrupt: 16
+
+#ft3267_touchscreen:
+#  id: ft3267_touch
+#  address: 0x38
+#  interrupt_pin: GPIO14
+#  on_touch:
+#    then:
+#      - logger.log:
+#          format: Touch %d at (%d, %d)
+#          args: [touch.id, touch.x, touch.y]
+#      - display.page.show_next: my_lcd
+
+touchscreen:
+  platform: ft3267
+
+time:
+  - platform: pcf8563
+    id: my_time
+    address: 0x51
+    update_interval: never
+  - platform: homeassistant
+    on_time_sync:
+      then:
+        - pcf8563.write_time: my_time
+        - text_sensor.template.publish:
+            id: template_text
+            state: !lambda |-
+              char str[17];
+              time_t currTime = id(my_time).now().timestamp;
+              strftime(str, sizeof(str), "%Y-%m-%d %H:%M", localtime(&currTime));
+              return  { str };
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: DEBUG
+
+
+rc522_i2c:
+  i2c_id:  bus_internal
+  address: 0x28
+  on_tag:
+    then:
+      - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
+      - homeassistant.tag_scanned: !lambda 'return x;'
+
+rtttl:
+  output: my_speaker_output
+  id: my_rtttl
+
+color:
+  - id: black
+    hex: '000000'
+  - id: dark_green
+    hex: '013208'
+  - id: my_red
+    red: 100%
+    green: 3%
+    blue: 5%
+  - id: my_green
+    hex: 59981A
+  - id: my_blue
+    red: 3%
+    green: 5%
+    blue: 100%
+  - id: my_yellow
+    hex: FFFF00 
+  - id: my_light_blue
+    hex: 145DA0
+  - id: my_light_red
+    hex: fc6d6d
+  - id: my_light_orange
+    hex: FD7F20
+  - id: my_light_yellow
+    hex: B58B00
+  - id: dark_blue
+    hex: '000040'
+  - id: dark_red
+    hex: '67091C'
+
+image:
+  - file: mdi:volume-variant-off
+    id: volume_mute
+    resize: 40x40
+  - file: mdi:volume-low
+    id: volume_notmute
+    resize: 40x40
+  - file: mdi:light-recessed
+    id: downlighticon
+    resize: 80x80
+  - file: mdi:air-conditioner
+    id: airconicon
+    resize: 80X80
+  - file: mdi:snowflake
+    id: ac_cool_40
+    resize: 40x40
+  - file: mdi:sun-snowflake-variant
+    id: ac_heatcool_40
+    resize: 40x40
+  - file: mdi:fan
+    id: ac_fan_40
+    resize: 40x40
+  - file: mdi:power-cycle
+    id: power_off_icon_40
+    resize: 40x40
+  - file: mdi:water-percent
+    id: ac_dry_40
+    resize: 40x40
+  - file: mdi:fire
+    id: ac_heat_40
+    resize: 40x40
+  - file: mdi:thermometer
+    id: temp_target_icon
+    resize: 20x20
+  - file: mdi:bullseye
+    id: temp_current_icon
+    resize: 20x20
+  - file: mdi:snowflake
+    id: ac_cool_80
+    resize: 80x80
+  - file: mdi:sun-snowflake-variant
+    id: ac_heatcool_80
+    resize: 80x80
+  - file: mdi:fan
+    id: ac_fan_80
+    resize: 80x80
+  - file: mdi:power-cycle
+    id: power_off_icon_80
+    resize: 80x80
+  - file: mdi:water-percent
+    id: ac_dry_80
+    resize: 80x80
+  - file: mdi:fire
+    id: ac_heat_80
+    resize: 80x80
+  - file: mdi:knob
+    id: volumeknob
+    resize: 80x80
+  - file: mdi:information
+    id: infoicon
+    resize: 40x40
+  - file: mdi:air-filter
+    id: zoneicon
+    resize: 25x25
+  - file: mdi:knob
+    id: volumeknob_60
+    resize: 60x60
+  - file: mdi:air-conditioner
+    id: airconicon_60
+    resize: 50X50
+  - file: mdi:light-recessed
+    id: downlighticon_60
+    resize: 60x60
+
+font:
+  - id: roboto16
+    file: "gfonts://Roboto"
+    size: 16
+
+  - id: roboto20
+    file: "gfonts://Roboto"
+    size: 20
+  
+  - id: roboto24
+    file: "gfonts://Roboto"   
+    size: 24
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret m4dialencryption
+
+ota:
+  password: !secret m4dialotapassword
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: 10.0.0.237
+    gateway: 10.0.0.1
+    subnet: 255.255.255.0
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "M4Dial Fallback Hotspot"
+    password: !secret m4fallbackpassword
+
+captive_portal:
+
+uart:
+  tx_pin: GPIO2
+  rx_pin: GPIO1
+  baud_rate: 256000
+  parity: NONE
+  stop_bits: 1
+
+ld2410:
+
+spi:
+  mosi_pin: GPIO5
+  clk_pin: GPIO6
+
+display:
+- platform: gc9a01
+  reset_pin: GPIO8
+  id: my_lcd
+  cs_pin: GPIO7
+  dc_pin: GPIO4
+  rotation: 90
+  width: 240
+  height: 240
+  update_interval: 1s
+  pages:
+    - id: MenuPage
+      lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
+
+        it.filled_rectangle(0, 0, 120, 120, my_light_orange);
+        it.filled_rectangle(120, 0, 240, 120, dark_red);   
+
+        it.filled_rectangle(0, 120, 120, 240, dark_green);   
+        it.filled_rectangle(120, 120, 240, 240, dark_blue);
+              
+        it.line(0, halfscreenheight, screenwidth, halfscreenheight);
+        it.line(halfscreenwidth, 0, halfscreenwidth, screenheight);
+
+        it.image(halfscreenwidth - 50, halfscreenheight - 75, airconicon_60, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth + 50, halfscreenheight + 30, airconicon_60, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth + 50, halfscreenheight - 80, downlighticon_60, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth - 50, halfscreenheight + 25, volumeknob_60, ImageAlign::TOP_CENTER);
+    - id: page1
+      lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
+        if (id(dimmersensor).state == "ON")
+        {
+          it.start_clipping(0, (id(dimmersensor_brightness).state * -1) + 255, 250, 250);
+          it.filled_circle(halfscreenwidth, screenheight, 255, my_light_yellow);
+          it.end_clipping();
+        }
+        it.image(halfscreenwidth, halfscreenheight - 55, downlighticon, ImageAlign::TOP_CENTER);
+        it.printf(halfscreenwidth, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%s", id(dimmersensor).state.c_str()); 
+        it.filled_circle(halfscreenwidth - 18, 225, 3);
+        it.circle(halfscreenwidth -6, 225, 3);
+        it.circle(halfscreenwidth +6, 225, 3);
+        it.circle(halfscreenwidth +18, 225, 3);
+        it.start_clipping(0, 180, 250, 250);
+        it.filled_circle(screenwidth, screenheight, 255, dark_blue);
+        it.end_clipping();
+    - id: page2
+      lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
+        if (id(climatedevice).state == "cool")
+        {
+          // cooling
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_blue);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_cool_80, ImageAlign::TOP_CENTER); 
+        }
+        else if (id(climatedevice).state == "heat")
+        {
+          // heating
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_red);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_heat_80, ImageAlign::TOP_CENTER);
+        }
+        else if (id(climatedevice).state == "auto")
+        {
+          // auto heat or cool
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_heatcool_80, ImageAlign::TOP_CENTER);
+        }
+        else if (id(climatedevice).state == "fan_only")
+        {
+          // fan only
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_fan_80, ImageAlign::TOP_CENTER);
+        }
+        else if (id(climatedevice).state == "dry")
+        {
+          // dry
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_green);
+          // it.image(halfscreenwidth - 80, halfscreenheight - 20, ac_dry_40, ImageAlign::TOP_CENTER);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_dry_80, ImageAlign::TOP_CENTER);
+        }
+        else if (id(climatedevice).state == "off")
+        {
+          // off
+          it.image(halfscreenwidth, halfscreenheight - 55, power_off_icon_80, ImageAlign::TOP_CENTER);
+        }
+        it.printf(halfscreenwidth, halfscreenheight - 95, id(roboto24), TextAlign::TOP_CENTER, "Air-Con");
+        it.printf(halfscreenwidth + 10, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_setpoint).state); 
+        it.printf(halfscreenwidth + 10, halfscreenheight + 65, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_currenttemp).state); 
+        
+        if (id(climatedevice).state != "off")
+        {
+          it.image(halfscreenwidth - 95, halfscreenheight - 2, zoneicon, ImageAlign::TOP_CENTER);
+          it.printf(halfscreenwidth - 75, halfscreenheight, id(roboto20), TextAlign::TOP_CENTER, "%s", id(zones_open).state.c_str()); 
+        }
+        
+        it.line(halfscreenwidth - 40, halfscreenheight + 65, it.get_width() / 2 + 40, it.get_height() / 2 + 65);
+        it.image(halfscreenwidth - 30, halfscreenheight + 40, temp_current_icon, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth - 30, halfscreenheight + 70, temp_target_icon, ImageAlign::TOP_CENTER);
+        
+        it.circle(halfscreenwidth - 18, 225, 3);
+        it.filled_circle(halfscreenwidth -6, 225, 3);
+        it.circle(halfscreenwidth +6, 225, 3);
+        it.circle(halfscreenwidth +18, 225, 3);
+    - id: page3
+      lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
+        if (id(mediaplayermute).state == "on")
+        {
+          it.image(halfscreenwidth + 80, halfscreenwidth -25, volume_mute, ImageAlign::TOP_CENTER);
+        }
+        else
+        {
+          it.image(halfscreenwidth + 80, halfscreenheight -25, volume_notmute, ImageAlign::TOP_CENTER);
+        }
+        it.image(halfscreenwidth, halfscreenheight - 55, volumeknob, ImageAlign::TOP_CENTER);
+        it.printf(halfscreenwidth, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f%%", id(beam_volume).state * 100); 
+        it.circle(halfscreenwidth - 18, 225, 3);
+        it.circle(halfscreenwidth -6, 225, 3);
+        it.filled_circle(halfscreenwidth +6, 225, 3);
+        it.circle(halfscreenwidth +18, 225, 3);
+    - id: page4
+      lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
+        it.image(halfscreenwidth, halfscreenheight - 55, infoicon, ImageAlign::TOP_CENTER);
+        it.printf(halfscreenwidth, halfscreenheight + 0, id(roboto20), TextAlign::TOP_CENTER, "IP: %s", id(espip).state.c_str()); 
+        it.circle(halfscreenwidth - 18, 225, 3);
+        it.circle(halfscreenwidth -6, 225, 3);
+        it.circle(halfscreenwidth +6, 225, 3);
+        it.filled_circle(halfscreenwidth +18, 225, 3);
+    
+      
+  on_page_change:
+      - to: page1
+        then:
+          - sensor.rotary_encoder.set_value:
+              id: rotaryencoder
+              value: !lambda return (id(dimmersensor_brightness).state / 255) * 100;
+          - component.update: my_lcd
+      - to: page2
+        then:
+          - sensor.rotary_encoder.set_value:
+              id: rotaryencoder
+              value: !lambda return id(climatedevice_setpoint).state;
+          - component.update: my_lcd
+      - to: page3
+        then:
+          - sensor.rotary_encoder.set_value:
+              id: rotaryencoder
+              value: !lambda 'return id(beam_volume).state * 100;'
+          - component.update: my_lcd
+
+binary_sensor:
+  - platform: touchscreen
+    name: Top Left Touch Quadrant
+    x_min: 0
+    x_max: 119
+    y_min: 0
+    y_max: 119
+    on_press:
+      - if:
+          condition: 
+            - display.is_displaying_page: MenuPage
+          then:
+            - display.page.show: page3
+          else:
+            - display.page.show: MenuPage
+  - platform: touchscreen
+    name: Top Right Touch Quadrant
+    x_min: 120
+    x_max: 240
+    y_min: 0
+    y_max: 119
+    page_id: MenuPage
+    on_press:
+      - display.page.show: page1
+  - platform: touchscreen
+    name: Bottom Left Touch Quadrant
+    x_min: 0
+    x_max: 119
+    y_min: 120
+    y_max: 240
+    page_id: MenuPage
+    on_press:
+      - display.page.show: page3
+  - platform: touchscreen
+    name: Bottom Right Touch Quadrant
+    x_min: 120
+    x_max: 240
+    y_min: 120
+    y_max: 240
+    page_id: MenuPage
+    on_press:
+      - display.page.show: page2
+  - platform: gpio
+    pin: GPIO42
+    name: "BacklightButton"
+    on_press:
+        - if:
+            condition:
+              - display.is_displaying_page: page1
+            then:
+              - homeassistant.service:
+                  service: light.toggle
+                  data:
+                    entity_id: light.great_room_dimmer_4
+              - component.update: my_lcd
+        - if:
+            condition:
+              - display.is_displaying_page: page2
+            then:
+              if: 
+                condition:
+                    lambda: return id(climatedevice).state == "off";
+                then:
+                  - homeassistant.service:
+                      service: climate.turn_on
+                      data:
+                        entity_id: climate.doris
+                else:
+                  - homeassistant.service:
+                      service: climate.turn_off
+                      data:
+                        entity_id: climate.doris
+        - if:
+            condition:
+              - display.is_displaying_page: page3
+            then:
+              if:
+                condition:
+                  lambda: return id(mediaplayermute).state == "off";
+                then:
+                  - logger.log: 
+                      format: "The mediaplayer sensor reports value %s"
+                      args: [ 'id(mediaplayermute).state' ]
+                  - homeassistant.service:
+                     service: media_player.volume_mute
+                     data:
+                      entity_id: media_player.living_room
+                      is_volume_muted: 'true'
+                else:
+                  - logger.log: 
+                      format: "The mediaplayer sensor reports value %s"
+                      args: [ 'id(mediaplayermute).state' ]
+                  - homeassistant.service:
+                     service: media_player.volume_mute
+                     data:
+                      entity_id: media_player.living_room
+                      is_volume_muted: 'false'
+              
+  - platform: ld2410
+    has_target:
+      name: Presence
+    has_moving_target:
+      name: Moving Target
+    has_still_target:
+      name: Still Target
+
+sensor:
+  - platform: rotary_encoder
+    name: "Rotary Encoder"
+    id: rotaryencoder
+    pin_a: 
+      number: GPIO40
+      mode:
+       input: true
+       pullup: true
+    pin_b: 
+      number: GPIO41
+      mode:
+       input: true
+       pullup: true
+    accuracy_decimals: 1
+    #on_value:
+    #  - component.update: my_lcd
+    on_clockwise: 
+      - if:
+          condition:
+            - display.is_displaying_page: page1
+          then:
+            - homeassistant.service:
+                service: light.turn_on
+                data:
+                  entity_id: light.great_room_dimmer_4
+                  brightness: !lambda int brightness = id(dimmersensor_brightness).state + 35; return brightness;
+            - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page2
+          then:
+            - homeassistant.service:
+                service: climate.set_temperature
+                data:
+                  entity_id: climate.doris
+                  temperature: !lambda return (id(climatedevice_setpoint).state + 1);
+            - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page3
+          then:
+            - homeassistant.service:
+                service: media_player.volume_up
+                data:
+                  entity_id: media_player.living_room
+            - component.update: my_lcd
+    on_anticlockwise:
+      - if:
+          condition:
+            - display.is_displaying_page: page1
+          then:
+            - homeassistant.service:
+                service: light.turn_on
+                data:
+                  entity_id: light.great_room_dimmer_4
+                  brightness: !lambda int brightness = id(dimmersensor_brightness).state - 35; return brightness;
+            - component.update: my_lcd        
+      - if:
+          condition:
+            - display.is_displaying_page: page2
+          then:
+            - homeassistant.service:
+                service: climate.set_temperature
+                data:
+                  entity_id: climate.doris
+                  temperature: !lambda return (id(climatedevice_setpoint).state - 1);
+            - component.update: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: page3
+          then:
+            - homeassistant.service:
+                service: media_player.volume_down
+                data:
+                  entity_id: media_player.living_room
+            - component.update: my_lcd
+
+  - platform: homeassistant
+    name: "Media Volume"
+    id: "beam_volume"
+    entity_id: media_player.living_room
+    attribute: volume_level
+    on_value:
+      - if:
+          condition:
+            - display.is_displaying_page: page3
+          then:
+           - sensor.rotary_encoder.set_value:
+              id: rotaryencoder
+              value: !lambda 'return id(beam_volume).state;'
+      - component.update: my_lcd
+  - platform: ld2410
+    detection_distance:
+      name: Detection Distance
+      id: ddistance
+      on_value: 
+        then:
+          if:
+            condition:
+              - lambda: 'return id(ddistance).state < 150;'  
+            then:
+              if:
+                condition:
+                  - light.is_off: backlight
+                then:              
+                  - light.turn_on: backlight
+            else:
+              - light.turn_off: 
+                  id: backlight
+                  transition_length: 1s           
+    light:
+      name: light
+    moving_distance:
+      name : Moving Distance
+    still_distance:
+      name: Still Distance
+    moving_energy:
+      name: Move Energy
+    still_energy:
+      name: Still Energy
+  - platform: homeassistant
+    name: "Dimmer Light Brightness"
+    id: "dimmersensor_brightness"
+    entity_id: light.great_room_dimmer_4
+    attribute: brightness
+    on_value:
+      - if:
+          condition:
+            - display.is_displaying_page: page1
+          then:
+           - sensor.rotary_encoder.set_value:
+              id: rotaryencoder
+              value: !lambda return (id(dimmersensor_brightness).state / 255) * 100;
+      - component.update: my_lcd    
+  - platform: homeassistant
+    name: "Climate Device Current Temperature"
+    id: "climatedevice_currenttemp"
+    entity_id: climate.doris
+    attribute: current_temperature
+    on_value:
+      - if:
+          condition:
+            - display.is_displaying_page: page2
+          then:
+           - sensor.rotary_encoder.set_value:
+              id: rotaryencoder
+              value: !lambda return id(climatedevice_currenttemp).state;
+      - component.update: my_lcd
+  - platform: homeassistant
+    name: "Climate Device Setpoint"
+    id: "climatedevice_setpoint"
+    entity_id: climate.doris
+    attribute: temperature
+    on_value:
+      - component.update: my_lcd
+  - platform: homeassistant
+    name: "Room Lux Sensor"
+    id: luxsensor
+    entity_id: sensor.sauron_illuminance
+    on_value:
+      - logger.log: 
+          format: "The illumincance sensor reports value %.0f"
+          args: [ 'id(luxsensor).state' ]
+      - lambda: |- 
+          float lux = id(luxsensor).state;
+          if (lux < 15) 
+          { 
+            id(oledbacklight).set_level(0.1);
+          }
+          else if (lux < 50)
+          {
+            id(oledbacklight).set_level(0.3);
+          }
+          else if (lux < 125)
+          {
+            id(oledbacklight).set_level(0.5);
+          }
+          else if (lux < 200)
+          {
+            id(oledbacklight).set_level(0.6);
+          }
+          else
+          {
+            id(oledbacklight).set_level(1);
+          }
+
+light:
+  - platform: monochromatic
+    id: backlight
+    name: "Backlight"
+    output: oledbacklight
+    default_transition_length: 250ms
+
+output:
+  - id: oledbacklight
+    platform: ledc
+    pin: GPIO9
+    #pin: GPIO21
+    max_power: 1
+    min_power: 0
+  - platform: ledc
+    pin: GPIO3
+    id: my_speaker_output
+    
+switch:
+  - platform: ld2410
+    engineering_mode:
+      name: "engineering mode"
+    bluetooth:
+      name: "control bluetooth"
+
+text_sensor:
+  - platform: ld2410
+    version:
+      name: "firmware version"
+    mac_address:
+      name: "mac address"
+  - platform: homeassistant
+    name: "Dimmer Light Sensor"
+    id: "dimmersensor"
+    entity_id: light.great_room_dimmer_4
+    filters:
+      - to_upper:
+    on_value:
+      - if:
+          condition:
+            - display.is_displaying_page: page1
+          then:
+            - component.update: my_lcd
+  - platform: homeassistant
+    name: "Climate Device"
+    id: "climatedevice"
+    entity_id: climate.doris
+    filters:
+    - map:
+      - heat_cool -> auto
+    on_value:
+      - if:
+          condition:
+            - display.is_displaying_page: page2
+          then:
+            - component.update: my_lcd 
+  - platform: homeassistant
+    name: "Media Player Mute"
+    id: "mediaplayermute"
+    entity_id: media_player.living_room
+    attribute: is_volume_muted
+    on_value:
+      - if:
+          condition:
+            - display.is_displaying_page: page3
+          then:
+            - component.update: my_lcd
+  - platform: homeassistant
+    name: "Zones Open"
+    id: "zones_open"
+    entity_id: sensor.ac_zones_open
+    on_value:
+      - if:
+          condition:
+            - display.is_displaying_page: page2
+          then:
+            - component.update: my_lcd
+  - platform: template
+    name: "RTC Sensor"
+    id: template_text
+  - platform: wifi_info
+    ip_address:
+      name: ESP IP Address
+      id: espip
