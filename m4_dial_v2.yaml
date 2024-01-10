@@ -13,13 +13,20 @@ esphome:
               time_t currTime = id(my_time).now().timestamp;
               strftime(str, sizeof(str), "%Y-%M-%d %H:%M", localtime(&currTime));
               return  { str };
-  # BEEP GPIO3
-  # RGBLED GPIO21
   
 globals:
   - id: encoder_value
     type: int
     initial_value: '0'
+    restore_value: yes
+  - id: light_encoder_resolution
+    type: int
+    initial_value: '4'
+    restore_value: yes  
+  - id: climate_encoder_resolution
+    type: int
+    initial_value: '4'
+    restore_value: yes  
 
 external_components:
   - source: github://dgaust/esphome@gc9a01
@@ -76,6 +83,8 @@ rtttl:
   id: my_rtttl
 
 color:
+  - id: my_white
+    hex: 'FFFFFF'
   - id: black
     hex: '000000'
   - id: dark_green
@@ -105,12 +114,21 @@ color:
   - id: dark_red
     hex: '67091C'
   - id: dark_grey
-    hex: '36454F'
+    hex: '161616'
+  - id: very_dark_grey
+    hex: '101111'
+  - id: very_dark_blue
+    hex: '0C355C'
 
 image:
+  - id: networkQR
+    file: images/m4dial/My_WiFi_QR_Code.png
+    resize: 160x160
   - id: background
     file: images/m4dial/background.png
     type: RGBA
+  - id: switch_animated
+    file: images/m4dial/switch.gif
     resize: 240x240
   - id: volume_mute
     file: mdi:volume-variant-off
@@ -205,6 +223,19 @@ image:
   - id: settings_menu_icon
     file: mdi:cog
     resize: 30x30
+  - id: powercycle
+    file: mdi:power-cycle
+    resize: 30x30
+  - id: wifi_menu_item
+    file: mdi:wifi-sync
+    resize: 30x30
+
+
+animation:
+  - id: my_animation
+    file: images/m4dial/switch.gif
+    resize: 100x100
+    use_transparency: True
 
 font:
   - id: roboto16
@@ -213,7 +244,7 @@ font:
 
   - id: roboto20
     file: "gfonts://Roboto"
-    size: 24
+    size: 20
   
   - id: roboto24
     file: "gfonts://Roboto"   
@@ -268,62 +299,237 @@ display:
   pages:
     - id: TestPage
       lambda: |- 
+        Color bground_ac = id(very_dark_blue);
+        Color default_circle_color = id (very_dark_blue);
+        Color centre_circle_color = id (my_light_blue);
+
+        if (id(climatedevice).state == "cool")
+        {
+          // cooling
+          bground_ac = my_light_blue;
+        }
+        else if (id(climatedevice).state == "heat")
+        {
+          // heating
+          bground_ac = my_light_red;
+        }
+        else if (id(climatedevice).state == "auto")
+        {
+          bground_ac = my_light_orange;
+        }
+        else if (id(climatedevice).state == "fan_only")
+        {
+           bground_ac = my_light_orange;
+        }
+        else if (id(climatedevice).state == "dry")
+        {
+          // dry
+          bground_ac = my_green;
+        }
         it.image(120, 120, background, ImageAlign::CENTER);
-        it.filled_circle(120, 120, 30, my_light_blue);  // Central Circle
+        it.filled_circle(120, 120, 30, centre_circle_color);  // Central Circle
         it.image(120, 120, downlighticon_menu_icon, ImageAlign::CENTER);
         
-        it.filled_circle(190, 120, 30, my_light_orange);  // Circle 2
+        it.filled_circle(190, 120, 30, default_circle_color);  // Circle 2
         it.image(190, 120, threed_printer_menu_icon, ImageAlign::CENTER);
 
-        it.filled_circle(155, 181, 30, my_light_orange);  // Circle 3
-        it.image(155, 181, settings_menu_icon, ImageAlign::CENTER);
+        it.filled_circle(155, 181, 30, default_circle_color);  // Circle 3
+        it.image(155, 181, wifi_menu_item, ImageAlign::CENTER);
         
-        it.filled_circle(85, 181, 30, my_light_orange);  // Circle 4
+        it.filled_circle(85, 181, 30, default_circle_color);  // Circle 4
         it.image(85, 181, tv_menu_icon, ImageAlign::CENTER);
 
-        it.filled_circle(50, 120, 30, my_light_orange);  // Circle 5
+        it.filled_circle(50, 120, 30, default_circle_color);  // Circle 5
         it.image(50, 120, alarm_menu_icon, ImageAlign::CENTER);
 
-        it.filled_circle(85, 59, 30, my_light_orange);   // Circle 6
+        it.filled_circle(85, 59, 30, bground_ac);   // Circle 6
         it.image(85, 59, fan_menu_icon, ImageAlign::CENTER);
        
-        it.filled_circle(155, 59, 30, my_light_orange); // Circle 7     
+        it.filled_circle(155, 59, 30, default_circle_color); // Circle 7     
         it.image(155, 59, audio_menu_icon, ImageAlign::CENTER);  
     - id: FirstPage
       lambda: |-
         float screenheight = it.get_height();
         float screenwidth = it.get_width();
         float halfscreenheight = screenheight / 2;
-        float halfscreenwidth = screenwidth /2;
+        float halfscreenwidth = screenwidth / 2;
         it.image(120, 120, background, ImageAlign::CENTER);
         int centerX = 120;  // X-coordinate of the circle center
         int centerY = 120;  // Y-coordinate of the circle center
         int baseRadius = 120;  // Radius of the arc (half of 240)
         int thickness = 40;    // Thickness of the arc
         int encoderBrightness = id(encoder_value); 
-        int brightness = map(encoderBrightness, 0, 100, 180, 540);  // Map brightness to 0-360 degrees
-        for (int r = 0; r < thickness; r++) {  // Loop for each radius
-          int currentRadius = baseRadius - r;  // Calculate current radius
-          
-          // Initialize lastX and lastY to the leftmost point (180 degrees)
-          float startRad = 180 * PI / 180.0;
-          int lastX = centerX + currentRadius * cos(startRad);
-          int lastY = centerY + currentRadius * sin(startRad);
+        int arcLength = map(encoderBrightness, 0, 100, 0, 270);  // Map brightness to 0-270 degrees arc length
 
-          for (int i = 180; i <= brightness; i++) {  // Loop to draw the arc, starting from 180 degrees
-            float rad = i * PI / 180.0;  // Convert degree to radian
-            int x = centerX + currentRadius * cos(rad);
-            int y = centerY + currentRadius * sin(rad);
+        for (int r = 0; r < thickness; r++) {  
+            int currentRadius = baseRadius - r;  
 
-            it.line(lastX, lastY, x, y, my_yellow);
-            lastX = x;
-            lastY = y;
-          }
+            float startRad = 135 * PI / 180.0;
+            int lastX = centerX + currentRadius * cos(startRad);
+            int lastY = centerY + currentRadius * sin(startRad);
+
+            float endAngle = 135 + 270;  // Fixed 270-degree arc
+            for (int i = 135; i <= endAngle; i++) {  
+                float rad = i * PI / 180.0;
+                int x = centerX + currentRadius * cos(rad);
+                int y = centerY + currentRadius * sin(rad);
+
+                it.line(lastX, lastY, x, y, very_dark_grey);  // Replace 'very_dark_grey' with the actual color
+                lastX = x;
+                lastY = y;
+            }
         }
-        it.printf(halfscreenwidth, halfscreenheight, id(roboto20), TextAlign::TOP_CENTER, "Lights");
 
+        for (int r = 0; r < thickness; r++) {  // Loop for each radius
+            int currentRadius = baseRadius - r;  // Calculate current radius
 
+            // Initialize lastX and lastY to the starting point (135 degrees)
+            float startRad = 135 * PI / 180.0;
+            int lastX = centerX + currentRadius * cos(startRad);
+            int lastY = centerY + currentRadius * sin(startRad);
 
+            // Calculate the ending angle based on the arc length
+            float endAngle = 135 + arcLength;
+            for (int i = 135; i <= endAngle; i++) {  // Loop to draw the arc in a clockwise direction
+                float rad = i * PI / 180.0;  // Convert degree to radian
+                int x = centerX + currentRadius * cos(rad);
+                int y = centerY + currentRadius * sin(rad);
+
+                it.line(lastX, lastY, x, y, my_yellow);
+                lastX = x;
+                lastY = y;
+            }
+        }
+        // it.image(120, 120, id(my_animation), ImageAlign::CENTER);
+        it.printf(halfscreenwidth, halfscreenheight, id(roboto24), TextAlign::CENTER, "%d%%", id(encoder_value));
+        it.filled_circle(120, 200, 30, very_dark_grey);  // Central Circle
+        it.image(120, 200, powercycle, ImageAlign::CENTER);
+    - id: WifiQR
+      lambda: |-
+        // Draw the QR-code at position [x=50,y=0] with white color and a 2x scale
+        it.image(120, 120, networkQR, ImageAlign::CENTER);
+        it.printf(120, 200, id(roboto20), TextAlign::CENTER, "Password: IsWhatevs");
+    - id: AirConPage
+      lambda: |-
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth /2;
+        it.image(120, 120, background, ImageAlign::CENTER);
+        if (id(climatedevice).state == "cool")
+        {
+          // cooling
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_blue);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_cool_80, ImageAlign::TOP_CENTER); 
+        }
+        else if (id(climatedevice).state == "heat")
+        {
+          // heating
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_red);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_heat_80, ImageAlign::TOP_CENTER);
+        }
+        else if (id(climatedevice).state == "auto")
+        {
+          // auto heat or cool
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_heatcool_80, ImageAlign::TOP_CENTER);
+        }
+        else if (id(climatedevice).state == "fan_only")
+        {
+          // fan only
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_fan_80, ImageAlign::TOP_CENTER);
+        }
+        else if (id(climatedevice).state == "dry")
+        {
+          // dry
+          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_green);
+          // it.image(halfscreenwidth - 80, halfscreenheight - 20, ac_dry_40, ImageAlign::TOP_CENTER);
+          it.image(halfscreenwidth, halfscreenheight + -55, ac_dry_80, ImageAlign::TOP_CENTER);
+        }
+        else if (id(climatedevice).state == "off")
+        {
+          // off
+          it.image(halfscreenwidth, halfscreenheight - 55, power_off_icon_80, ImageAlign::TOP_CENTER);
+        }
+        
+        int centerX = 120;  // X-coordinate of the circle center
+        int centerY = 120;  // Y-coordinate of the circle center
+        int baseRadius = 120;  // Radius of the arc (half of 240)
+        int thickness = 10;    // Thickness of the arc
+        int encoderBrightness = id(encoder_value); 
+        int arcLength = map(encoderBrightness, 0, 100, 0, 270);  // Map brightness to 0-270 degrees arc length
+
+        for (int r = 0; r < thickness; r++) {  
+            int currentRadius = baseRadius - r;  
+
+            float startRad = 135 * PI / 180.0;
+            int lastX = centerX + currentRadius * cos(startRad);
+            int lastY = centerY + currentRadius * sin(startRad);
+
+            float endAngle = 135 + 270;  // Fixed 270-degree arc
+            for (int i = 135; i <= endAngle; i++) {  
+                float rad = i * PI / 180.0;
+                int x = centerX + currentRadius * cos(rad);
+                int y = centerY + currentRadius * sin(rad);
+
+                it.line(lastX, lastY, x, y, very_dark_grey);  // Replace 'very_dark_grey' with the actual color
+                lastX = x;
+                lastY = y;
+            }
+        }
+
+        for (int r = 0; r < thickness; r++) {  // Loop for each radius
+            int currentRadius = baseRadius - r;  // Calculate current radius
+
+            // Initialize lastX and lastY to the starting point (135 degrees)
+            float startRad = 135 * PI / 180.0;
+            int lastX = centerX + currentRadius * cos(startRad);
+            int lastY = centerY + currentRadius * sin(startRad);
+
+            // Calculate the ending angle based on the arc length
+            float endAngle = 135 + arcLength;
+            for (int i = 135; i <= endAngle; i++) {  // Loop to draw the arc in a clockwise direction
+                float rad = i * PI / 180.0;  // Convert degree to radian
+                int x = centerX + currentRadius * cos(rad);
+                int y = centerY + currentRadius * sin(rad);
+
+                it.line(lastX, lastY, x, y, my_white);
+                lastX = x;
+                lastY = y;
+            }
+        }
+        it.printf(halfscreenwidth, halfscreenheight - 95, id(roboto24), TextAlign::TOP_CENTER, "Air-Con");
+        it.printf(halfscreenwidth + 10, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_setpoint).state); 
+        it.printf(halfscreenwidth + 10, halfscreenheight + 65, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_currenttemp).state); 
+        
+        if (id(climatedevice).state != "off")
+        {
+          it.image(halfscreenwidth - 95, halfscreenheight - 2, zoneicon, ImageAlign::TOP_CENTER);
+          it.printf(halfscreenwidth - 75, halfscreenheight, id(roboto20), TextAlign::TOP_CENTER, "%s", id(zones_open).state.c_str()); 
+        }
+        
+        it.line(halfscreenwidth - 40, halfscreenheight + 65, it.get_width() / 2 + 40, it.get_height() / 2 + 65);
+        it.image(halfscreenwidth - 30, halfscreenheight + 40, temp_current_icon, ImageAlign::TOP_CENTER);
+        it.image(halfscreenwidth - 30, halfscreenheight + 70, temp_target_icon, ImageAlign::TOP_CENTER);
+
+  on_page_change:
+    - to: FirstPage
+      then:
+          - sensor.rotary_encoder.set_value:
+              id: rotaryencoder
+              value: !lambda 'return map(id(dimmersensor_brightness).state, 0, 254, 0, (100/id(light_encoder_resolution)));'
+          - component.update: my_lcd
+    - to: AirConPage
+      then:
+          - sensor.rotary_encoder.set_value:
+              id: rotaryencoder
+              value: !lambda 'return map(id(climatedevice_setpoint).state, 17, 31, 0, 100);'
+          - component.update: my_lcd
+
+qr_code:
+  - id: homepage_qr
+    value: esphome.io
 
 binary_sensor:
   - platform: touchscreen
@@ -332,10 +538,9 @@ binary_sensor:
     x_max: 150  # Center x + radius
     y_min: 90   # Center y - radius
     y_max: 150  # Center y + radius
-    on_state:
-      then:
-        - logger.log: "Central Circle Touched"
-        - display.page.show: FirstPage
+    page_id: TestPage
+    on_release:
+      - display.page.show: FirstPage
   - platform: touchscreen
     name: "Circle 2 Touch"
     x_min: 160  # Center x - radius
@@ -343,19 +548,18 @@ binary_sensor:
     y_min: 90   # Center y - radius
     y_max: 150  # Center y + radius
     page_id: TestPage
-    on_state:
+    on_release:
       then:
         - logger.log: "Circle 2 Touched"
   - platform: touchscreen
     name: "Circle 3 Touch"
-    page_id: TestPage
     x_min: 125  # Center x - radius
     x_max: 185  # Center x + radius
     y_min: 151  # Center y - radius
     y_max: 211  # Center y + radius
-    on_state:
-      then:
-        - logger.log: "Circle 3 Touched"
+    page_id: TestPage
+    on_release:
+      - display.page.show: WifiQR
   - platform: touchscreen
     name: "Circle 4 Touch"
     page_id: TestPage
@@ -363,7 +567,7 @@ binary_sensor:
     x_max: 115  # Center x + radius
     y_min: 151  # Center y - radius
     y_max: 211  # Center y + radius
-    on_state:
+    on_release:
       then:
         - logger.log: "Circle 4 Touched"
   - platform: touchscreen
@@ -373,7 +577,7 @@ binary_sensor:
     x_max: 80   # Center x + radius
     y_min: 90   # Center y - radius
     y_max: 150  # Center y + radius
-    on_state:
+    on_release:
       then:
         - logger.log: "Circle 5 Touched"
   - platform: touchscreen
@@ -383,9 +587,8 @@ binary_sensor:
     x_max: 115  # Center x + radius
     y_min: 29   # Center y - radius
     y_max: 89   # Center y + radius
-    on_state:
-      then:
-        - logger.log: "Circle 6 Touched"
+    on_release:
+      - display.page.show: AirConPage
   - platform: touchscreen
     name: "Circle 7 Touch"
     page_id: TestPage
@@ -393,7 +596,7 @@ binary_sensor:
     x_max: 185  # Center x + radius
     y_min: 29   # Center y - radius
     y_max: 89   # Center y + radius
-    on_state:
+    on_release:
       then:
         - logger.log: "Circle 7 Touched"
   - platform: gpio
@@ -415,7 +618,9 @@ sensor:
     id: rotaryencoder
     max_value: 100
     min_value: 0
-    resolution: 4
+    resolution: 1
+    filters:
+      - throttle: 1s
     pin_a: 
       number: GPIO40
       mode:
@@ -428,15 +633,25 @@ sensor:
        pullup: true
     accuracy_decimals: 1
     on_value:
-      - globals.set:
-            id: encoder_value
-            value: !lambda 'return x;'
-      - component.update: my_lcd
-      
-    #on_clockwise: 
-    #    - display.page.show_previous: my_lcd
-    #on_anticlockwise:
-    #    - display.page.show_next: my_lcd
+      - if:
+          condition:
+            - display.is_displaying_page: FirstPage
+          then:
+            - globals.set:
+                id: encoder_value
+                value: !lambda 'int val = x * id(light_encoder_resolution); return (val > 100) ? 100 : val;'
+            - homeassistant.service:
+                service: light.turn_on
+                data:
+                  entity_id: light.great_room_dimmer_4
+                  brightness_pct: !lambda 'return id(encoder_value);'
+      - if:
+          condition:
+            - display.is_displaying_page: AirConPage
+          then:
+            - globals.set:
+                id: encoder_value
+                value: !lambda 'int val = x * id(light_encoder_resolution); return (val > 100) ? 100 : val;'
 
   - platform: homeassistant
     name: "Media Volume"
@@ -478,9 +693,14 @@ sensor:
     entity_id: light.great_room_dimmer_4
     attribute: brightness
     on_value:
-      - globals.set:
-            id: encoder_value
-            value: !lambda 'return map(x, 0, 254, 0, 100);'
+       - if:
+          condition: 
+            - display.is_displaying_page: FirstPage
+          then:
+            - globals.set:
+                  id: encoder_value
+                  value: !lambda 'return map(x, 0, 254, 0, 100);'
+            - component.update: my_lcd
   - platform: homeassistant
     name: "Climate Device Current Temperature"
     id: "climatedevice_currenttemp"
@@ -535,7 +755,6 @@ output:
   - id: oledbacklight
     platform: ledc
     pin: GPIO9
-    #pin: GPIO21
     max_power: 1
     min_power: 0
   - platform: ledc
