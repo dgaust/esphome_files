@@ -13,6 +13,13 @@ esphome:
               time_t currTime = id(my_time).now().timestamp;
               strftime(str, sizeof(str), "%Y-%M-%d %H:%M", localtime(&currTime));
               return  { str };
+
+substitutions:
+  # Add the ids of the devices you want to control here
+  light_control: light.great_room_dimmer_4
+  climate_control: climate.doris
+  cover_control: cover.sunshade
+
 esp32:
   board: esp32-s3-devkitc-1
   framework:
@@ -64,7 +71,7 @@ script:
       - homeassistant.service:
           service: light.turn_on
           data_template:
-            entity_id: light.great_room_dimmer_4
+            entity_id: $light_control
             brightness: !lambda 'return id(new_light_brightness).state;'
 
   - id: my_climate_temperature_script
@@ -74,7 +81,7 @@ script:
       - homeassistant.service:
           service: climate.set_temperature
           data_template:
-            entity_id: climate.doris
+            entity_id: $climate_control
             temperature: !lambda return (id(temperature_new_setpoint).state);
   
   - id: my_cover_script
@@ -84,7 +91,7 @@ script:
       - homeassistant.service:
           service: cover.set_cover_position
           data_template:
-            entity_id: cover.sunshade
+            entity_id: $cover_control
             position: !lambda return (id(new_cover_position).state);
 
 external_components:
@@ -1053,7 +1060,7 @@ binary_sensor:
         - homeassistant.service:
                 service: light.toggle
                 data:
-                  entity_id: light.great_room_dimmer_4
+                  entity_id: $light_control
   - platform: touchscreen
     name: "ClimateSelection"   
     x_min: 50  # Center x - radius
@@ -1075,7 +1082,7 @@ binary_sensor:
       - homeassistant.service:
           service: climate.set_hvac_mode
           data:
-            entity_id: climate.doris
+            entity_id: $climate_control
             hvac_mode: "heat_cool"
       - component.update: my_lcd
   
@@ -1090,7 +1097,7 @@ binary_sensor:
       - homeassistant.service:
           service: climate.set_hvac_mode
           data:
-            entity_id: climate.doris
+            entity_id: $climate_control
             hvac_mode: "cool"
       - component.update: my_lcd
   
@@ -1105,7 +1112,7 @@ binary_sensor:
       - homeassistant.service:
           service: climate.set_hvac_mode
           data:
-            entity_id: climate.doris
+            entity_id: $climate_control
             hvac_mode: "heat"
       - component.update: my_lcd
 
@@ -1120,7 +1127,7 @@ binary_sensor:
       - homeassistant.service:
           service: climate.set_hvac_mode
           data:
-            entity_id: climate.doris
+            entity_id: $climate_control
             hvac_mode: "off"
       - component.update: my_lcd
 
@@ -1147,7 +1154,7 @@ binary_sensor:
 sensor:
   - platform: homeassistant
     id: climate_target_temperature
-    entity_id: climate.doris
+    entity_id: $climate_control
     attribute: temperature
     on_value:
       then:
@@ -1155,7 +1162,7 @@ sensor:
 
   - platform: homeassistant
     id: cover_current_position
-    entity_id: cover.sunshade
+    entity_id: $cover_control
     attribute: 	current_position
     on_value:
       if:
@@ -1168,7 +1175,7 @@ sensor:
 
   - platform: homeassistant
     id: climate_new_temperature
-    entity_id: climate.doris
+    entity_id: $climate_control
     attribute: temperature
     on_value:
       if:
@@ -1181,7 +1188,7 @@ sensor:
 
   - platform: homeassistant
     id: climate_current_temperature
-    entity_id: climate.doris
+    entity_id: $climate_control
     attribute: current_temperature
     on_value:
       then:
@@ -1189,7 +1196,7 @@ sensor:
 
   - platform: homeassistant
     id: climate_min_temperature
-    entity_id: climate.doris
+    entity_id: $climate_control
     attribute: min_temp
     on_value:
       then:
@@ -1197,7 +1204,7 @@ sensor:
 
   - platform: homeassistant
     id: climate_max_temperature
-    entity_id: climate.doris
+    entity_id: $climate_control
     attribute: max_temp
     on_value:
       then:
@@ -1331,7 +1338,7 @@ sensor:
   - platform: homeassistant
     name: "Dimmer Light Brightness"
     id: "dimmersensor_brightness"
-    entity_id: light.great_room_dimmer_4
+    entity_id: $light_control
     attribute: brightness
     on_value:
       if:
@@ -1345,7 +1352,7 @@ sensor:
   - platform: homeassistant
     name: "Climate Device Current Temperature"
     id: "climatedevice_currenttemp"
-    entity_id: climate.doris
+    entity_id: $climate_control
     attribute: current_temperature
     on_value:
       - component.update: my_lcd
@@ -1353,7 +1360,7 @@ sensor:
   - platform: homeassistant
     name: "Climate Device Setpoint"
     id: "climatedevice_setpoint"
-    entity_id: climate.doris
+    entity_id: $climate_control
     attribute: temperature
     on_value:
        if:
@@ -1422,7 +1429,7 @@ switch:
 text_sensor:
   - platform: homeassistant
     id: "cover_status"
-    entity_id: cover.sunshade
+    entity_id: $cover_control
     filters:
     - map:
       - open -> Open
@@ -1441,13 +1448,13 @@ text_sensor:
   - platform: homeassistant
     name: "Dimmer Light Sensor"
     id: "dimmersensor"
-    entity_id: light.great_room_dimmer_4
+    entity_id: $light_control
     filters:
       - to_upper:
   - platform: homeassistant
     name: "Climate Device"
     id: "climatedevice"
-    entity_id: climate.doris
+    entity_id: $climate_control
     filters:
     - map:
       - heat_cool -> auto
