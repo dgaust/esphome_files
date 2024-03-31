@@ -14,6 +14,33 @@ esphome:
               strftime(str, sizeof(str), "%Y-%M-%d %H:%M", localtime(&currTime));
               return  { str };
 
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: DEBUG
+
+api:
+  encryption:
+    key: !secret m4dialencryption
+
+ota:
+  password: !secret m4dialotapassword
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "M5Dial Fallback Hotspot"
+    password: !secret m4fallbackpassword
+
+captive_portal:
+
 globals:
   - id: encoder_value
     type: int
@@ -53,7 +80,7 @@ script:
 
 external_components:
   - source: github://dgaust/esphome@gc9a01
-    components: [ ft3267, gc9a01 ]
+    components: [ ft3267 ]
     refresh: 0s
 
 i2c:
@@ -61,7 +88,6 @@ i2c:
     sda: GPIO11
     scl: GPIO12
     scan: False
-    frequency: 400kHz
 
 touchscreen:
   platform: ft3267
@@ -82,16 +108,6 @@ time:
               time_t currTime = id(my_time).now().timestamp;
               strftime(str, sizeof(str), "%Y-%m-%d %H:%M", localtime(&currTime));
               return  { str };
-
-esp32:
-  board: esp32-s3-devkitc-1
-  framework:
-    type: arduino
-
-# Enable logging
-logger:
-  level: DEBUG
-
 
 rc522_i2c:
   i2c_id:  bus_internal
@@ -146,6 +162,8 @@ color:
     hex: '101111'
   - id: very_dark_blue
     hex: '0C355C'
+  - id: my_light_grey
+    hex: '949494'
 
 image:
   - id: networkQR
@@ -277,25 +295,6 @@ font:
     file: "gfonts://Roboto"   
     size: 24
 
-# Enable Home Assistant API
-api:
-  encryption:
-    key: !secret m4dialencryption
-
-ota:
-  password: !secret m4dialotapassword
-
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "M5Dial Fallback Hotspot"
-    password: !secret m4fallbackpassword
-
-captive_portal:
-
 uart:
   tx_pin: GPIO2
   rx_pin: GPIO1
@@ -380,15 +379,15 @@ number:
     initial_value: 20
 
 display:
-- platform: gc9a01
+- platform: ili9xxx
+  model: gc9a01a
   reset_pin: GPIO8
   id: my_lcd
   cs_pin: GPIO7
   dc_pin: GPIO4
-  rotation: 90
-  width: 240
-  height: 240
-  update_interval: 1s
+  dimensions: 
+    height: 240
+    width: 240
   pages:
     - id: TestPage
       lambda: |- 
@@ -465,7 +464,7 @@ display:
             halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle) * id(pi).state / 180),
             halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle) * id(pi).state / 180), 
             5, 
-            id(my_light_yellow));
+            id(my_light_orange));
         it
           .filled_circle(
             halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + endAngle) * id(pi).state / 180),
@@ -504,7 +503,7 @@ display:
                 halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
                 halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
                 halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                id(my_white));
+                id(my_light_grey));
             it
               .filled_triangle(
                 halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
@@ -513,7 +512,7 @@ display:
                 halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
                 halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
                 halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                id(my_white));
+                id(my_light_grey));
           }
           for (int i = startAngle + secondStepAngle; i <= startAngle + endAngle; i++) {
             it
@@ -561,65 +560,6 @@ display:
           } 
 
         it.printf(halfscreenwidth, halfscreenheight, id(roboto24), TextAlign::CENTER, "%d%%", map(id(new_light_brightness).state, 0, 255, 0, 100));
-        it.filled_circle(120, 200, 30, very_dark_grey);  // Central Circle
-        it.image(120, 200, powercycle, ImageAlign::CENTER);
-    - id: OldLightPage
-      lambda: |-
-        float screenheight = it.get_height();
-        float screenwidth = it.get_width();
-        float halfscreenheight = screenheight / 2;
-        float halfscreenwidth = screenwidth / 2;
-        
-        it.image(120, 120, background, ImageAlign::CENTER);
-        int centerX = 120;  // X-coordinate of the circle center
-        int centerY = 120;  // Y-coordinate of the circle center
-        int baseRadius = 120;  // Radius of the arc (half of 240)
-        int thickness = 40;    // Thickness of the arc
-        int encoderBrightness = id(encoder_value); 
-        int arcLength = map(encoderBrightness, 0, 100, 0, 270);  // Map brightness to 0-270 degrees arc length
-
-        for (int r = 0; r < thickness; r++) {  
-            int currentRadius = baseRadius - r;  
-
-            float startRad = 135 * PI / 180.0;
-            int lastX = centerX + currentRadius * cos(startRad);
-            int lastY = centerY + currentRadius * sin(startRad);
-
-            float endAngle = 135 + 270;  // Fixed 270-degree arc
-            for (int i = 135; i <= endAngle; i++) {  
-                float rad = i * PI / 180.0;
-                int x = centerX + currentRadius * cos(rad);
-                int y = centerY + currentRadius * sin(rad);
-
-                it.line(lastX, lastY, x, y, very_dark_grey);  // Replace 'very_dark_grey' with the actual color
-                lastX = x;
-                lastY = y;
-            }
-        }
-
-        for (int r = 0; r < thickness; r++) {  // Loop for each radius
-            int currentRadius = baseRadius - r;  // Calculate current radius
-
-            // Initialize lastX and lastY to the starting point (135 degrees)
-            float startRad = 135 * PI / 180.0;
-            int lastX = centerX + currentRadius * cos(startRad);
-            int lastY = centerY + currentRadius * sin(startRad);
-
-            // Calculate the ending angle based on the arc length
-            float endAngle = 135 + arcLength;
-            for (int i = 135; i <= endAngle; i++) {  // Loop to draw the arc in a clockwise direction
-                float rad = i * PI / 180.0;  // Convert degree to radian
-                int x = centerX + currentRadius * cos(rad);
-                int y = centerY + currentRadius * sin(rad);
-
-                it.line(lastX, lastY, x, y, my_yellow);
-                lastX = x;
-                lastY = y;
-            }
-        }
-
-        // it.image(120, 120, id(my_animation), ImageAlign::CENTER);
-        it.printf(halfscreenwidth, halfscreenheight, id(roboto24), TextAlign::CENTER, "%d%%", id(dimmersensor_brightness).state);
         it.filled_circle(120, 200, 30, very_dark_grey);  // Central Circle
         it.image(120, 200, powercycle, ImageAlign::CENTER);
     - id: WifiQR
@@ -814,45 +754,70 @@ display:
 
     - id: ClimateSettingsPage
       lambda: |- 
-        Color bground_ac = id(very_dark_blue);
-        Color default_circle_color = id (very_dark_blue);
-        Color centre_circle_color = id (my_light_blue);
+        Color default_circle_color = id(very_dark_blue);
+
+        Color heat_on = default_circle_color;
+        Color cool_on = default_circle_color;
+        Color dry_on = default_circle_color;
+        Color auto_on = default_circle_color;
+        Color fan_on = default_circle_color;
+        Color power_off = default_circle_color;
+
+
+        float screenheight = it.get_height();
+        float screenwidth = it.get_width();
+        float halfscreenheight = screenheight / 2;
+        float halfscreenwidth = screenwidth / 2;
 
         it.image(120, 120, background, ImageAlign::CENTER);
-        it.filled_circle(120, 120, 30, centre_circle_color);  // Central Circle
-        it.image(120, 120, powercycle, ImageAlign::CENTER);
-        
-        it.filled_circle(190, 120, 30, default_circle_color);  // Circle 2
-        it.image(190, 120, ac_heat_40, ImageAlign::CENTER);
 
-        it.filled_circle(155, 181, 30, default_circle_color);  // Circle 3
-        it.image(155, 181, ac_dry_40, ImageAlign::CENTER);
-        
-        it.filled_circle(85, 181, 30, default_circle_color);  // Circle 4
-        it.image(85, 181, ac_cool_40, ImageAlign::CENTER);
+        if (id(climatedevice).state == "cool")
+        {
+            // cooling
+            cool_on = my_light_blue;
+        }
+        else if (id(climatedevice).state == "heat")
+        {
+            // heating
+            heat_on = my_light_red;
+        }
+        else if (id(climatedevice).state == "auto")
+        { 
+            // auto heat or cool
+            auto_on = my_light_orange;
+        }
+        else if (id(climatedevice).state == "fan_only")
+        {
+            // fan only
+            fan_on =  my_light_orange;
+        }
+        else if (id(climatedevice).state == "dry")
+        {
+            // dry
+            dry_on = my_green;
+        }
+        else
+        {
+          power_off = my_light_blue;
+        }
 
-        it.filled_circle(50, 120, 30, default_circle_color);  // Circle 5
-        it.image(50, 120, ac_heatcool_40, ImageAlign::CENTER);
+        it.filled_circle(55, 85, 30, auto_on);  // Circle 5
+        it.image(55, 85, ac_heatcool_40, ImageAlign::CENTER);
 
-        it.filled_circle(85, 59, 30, bground_ac);   // Circle 6
-        it.image(85, 59, fan_menu_icon, ImageAlign::CENTER);
-       
-        it.filled_circle(155, 59, 30, default_circle_color); // Circle 7     
-        it.image(155, 59, audio_menu_icon, ImageAlign::CENTER);  
-          
-#  on_page_change:
-#    - to: FirstPage
-#      then:
-#          - sensor.rotary_encoder.set_value:
-#              id: rotaryencoder
-#              value: !lambda 'return map(id(dimmersensor_brightness).state, 0, 254, 0, (100/id(light_encoder_resolution)));'
-#          - component.update: my_lcd
-#    - to: AirConPage
-#      then:
-#          - sensor.rotary_encoder.set_value:
-#              id: rotaryencoder
-#              value: !lambda 'return map(id(climatedevice_setpoint).state,  id(climate_min_temperature).state,  id(climate_max_temperature).state, 0, 100);'
-#          - component.update: my_lcd
+        it.filled_circle(120, 85, 30, cool_on);  // Circle 4
+        it.image(120, 85, ac_cool_40, ImageAlign::CENTER);
+
+        it.filled_circle(185, 85, 30, heat_on);  // Circle 2
+        it.image(185, 85, ac_heat_40, ImageAlign::CENTER);
+
+        it.filled_circle(55, 155, 30, dry_on);  // Circle 3
+        it.image(55, 155, ac_dry_40, ImageAlign::CENTER);
+
+        it.filled_circle(120, 155, 30, fan_on);   // Circle 6
+        it.image(120, 155, fan_menu_icon, ImageAlign::CENTER);
+
+        it.filled_circle(185, 155, 30, power_off);  // Central Circle
+        it.image(185, 155, powercycle, ImageAlign::CENTER);
 
 qr_code:
   - id: homepage_qr
@@ -950,12 +915,58 @@ binary_sensor:
     page_id: AirConPage
     on_press:
       - display.page.show: ClimateSettingsPage
+  
   - platform: touchscreen
-    name: "Climate Centre Circle Touch"
-    x_min: 90   # Center x - radius
-    x_max: 150  # Center x + radius
-    y_min: 90   # Center y - radius
-    y_max: 150  # Center y + radius
+    name: "Climate Auto Touch"
+    x_min: 40   # Center x - radius
+    x_max: 70  # Center x + radius
+    y_min: 60  # Center y - radius
+    y_max: 100  # Center y + radius
+    page_id: ClimateSettingsPage
+    on_press:
+      - homeassistant.service:
+          service: climate.set_hvac_mode
+          data:
+            entity_id: climate.doris
+            hvac_mode: "heat_cool"
+      - component.update: my_lcd
+  
+  - platform: touchscreen
+    name: "Climate Cool Touch"
+    x_min: 105   # Center x - radius
+    x_max: 135  # Center x + radius
+    y_min: 60  # Center y - radius
+    y_max: 100  # Center y + radius
+    page_id: ClimateSettingsPage
+    on_press:
+      - homeassistant.service:
+          service: climate.set_hvac_mode
+          data:
+            entity_id: climate.doris
+            hvac_mode: "cool"
+      - component.update: my_lcd
+  
+  - platform: touchscreen
+    name: "Climate Heat Touch"
+    x_min: 170   # Center x - radius
+    x_max: 200  # Center x + radius
+    y_min: 60  # Center y - radius
+    y_max: 100  # Center y + radius
+    page_id: ClimateSettingsPage
+    on_press:
+      - homeassistant.service:
+          service: climate.set_hvac_mode
+          data:
+            entity_id: climate.doris
+            hvac_mode: "heat"
+      - component.update: my_lcd
+
+  - platform: touchscreen
+    name: "Climate Power Off Touch"
+    x_min: 160   # Center x - radius
+    x_max: 200  # Center x + radius
+    y_min: 140  # Center y - radius
+    y_max: 170  # Center y + radius
     page_id: ClimateSettingsPage
     on_press:
       - homeassistant.service:
@@ -963,6 +974,7 @@ binary_sensor:
           data:
             entity_id: climate.doris
             hvac_mode: "off"
+      - component.update: my_lcd
 
   - platform: gpio
     pin: GPIO42
@@ -998,7 +1010,7 @@ sensor:
     entity_id: climate.doris
     attribute: temperature
     on_value:
-       if:
+      if:
         condition:
           not:
             - script.is_running: my_climate_temperature_script
