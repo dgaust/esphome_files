@@ -42,26 +42,10 @@ wifi:
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "M5Dial Loose Fallback Hotspot"
+    ssid: "M5Dial Lose Fallback Hotspot"
     password: !secret m4fallbackpassword
 
 captive_portal:
-
-globals:
-  - id: encoder_value
-    type: int
-    initial_value: '0'
-    restore_value: yes
-  - id: light_encoder_resolution
-    type: int
-    initial_value: '4'
-    restore_value: yes  
-  - id: climate_encoder_resolution
-    type: int
-    initial_value: '4'
-    restore_value: yes  
-  - id: rf_code_queue
-    type: 'std::vector<std::string>'
 
 script:
   - id: my_light_brightness_script
@@ -138,57 +122,46 @@ rtttl:
   id: my_rtttl
 
 color:
-  - id: my_white
-    hex: 'FFFFFF'
-  - id: black
-    hex: '000000'
-  - id: dark_green
-    hex: '013208'
-  - id: my_red
-    red: 100%
-    green: 3%
-    blue: 5%
-  - id: my_green
-    hex: 3e6a12
-  - id: my_blue
-    red: 3%
-    green: 5%
-    blue: 100%
-  - id: my_yellow
-    hex: FFFF00 
-  - id: my_light_blue
-    hex: 145DA0
-  - id: my_light_red
-    hex: b04c4c
-  - id: my_dark_red
-    hex: 8B0000
-  - id: my_light_orange
-    hex: b15816
-  - id: my_orange
-    hex: FF5733
-  - id: my_light_yellow
-    hex: B58B00
-  - id: dark_blue
-    hex: '000040'
-  - id: dark_red
-    hex: '67091C'
-  - id: dark_grey
-    hex: '161616'
-  - id: very_dark_grey
-    hex: '101111'
-  - id: very_dark_blue
-    hex: '0C355C'
-  - id: my_light_grey
-    hex: '949494'
-  - id: my_ice_blue
-    hex: '739BD0'
-  - id: my_ice_red
-    hex: 'fc6d6d'
-  - id: my_ice_orange
-    hex: 'fd7f20'
-  - id: my_ice_green
-    hex: '59981a'
 
+  # Grey Gradients
+  - id: white_color
+    hex: 'FFFFFF'
+  - id: very_dark_grey_color
+    hex: '101111'
+  - id: light_grey_color
+    hex: '949494'
+
+  # Green Colors
+  - id: ice_green_color
+    hex: '59981a'
+  - id: green_color
+    hex: '3e6a12'
+
+  # Blue Colors
+  - id: light_blue_color
+    hex: '145DA0'
+  - id: ice_blue_color
+    hex: '739BD0'
+  - id: very_dark_blue_color
+    hex: '0C355C'
+
+  # Red Colors
+  - id: light_red_color
+    hex: 'b04c4c'
+  - id: ice_red_color
+    hex: 'fc6d6d'
+
+  # Orange Colors
+  - id: light_orange_color
+    hex: 'b15816'
+  - id: ice_orange_color
+    hex: 'fd7f20'
+
+  # Yellow Colors
+  - id: light_yellow_color
+    hex: 'B58B00'
+  
+  
 image:
   - id: networkQR
     file: images/m4dial/My_WiFi_QR_Code.png
@@ -426,32 +399,32 @@ display:
     pages:
       - id: TestPage
         lambda: |- 
-          Color bground_ac = id(very_dark_blue);
-          Color default_circle_color = id (very_dark_blue);
-          Color centre_circle_color = id (my_light_blue);
+          Color bground_ac = id(very_dark_blue_color);
+          Color default_circle_color = id (very_dark_blue_color);
+          Color centre_circle_color = id (light_blue_color);
 
           if (id(climatedevice).state == "cool")
           {
             // cooling
-            bground_ac = my_light_blue;
+            bground_ac = light_blue_color;
           }
           else if (id(climatedevice).state == "heat")
           {
             // heating
-            bground_ac = my_light_red;
+            bground_ac = light_red_color;
           }
           else if (id(climatedevice).state == "auto")
           {
-            bground_ac = my_light_orange;
+            bground_ac = light_orange_color;
           }
           else if (id(climatedevice).state == "fan_only")
           {
-             bground_ac = my_light_orange;
+             bground_ac = light_orange_color;
           }
           else if (id(climatedevice).state == "dry")
           {
             // dry
-            bground_ac = my_green;
+            bground_ac = green_color;
           }
           it.image(120, 120, background, ImageAlign::CENTER);
           it.filled_circle(120, 120, 30, centre_circle_color);  // Central Circle
@@ -499,13 +472,13 @@ display:
               halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle) * id(pi).state / 180),
               halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle) * id(pi).state / 180), 
               5, 
-              id(my_light_orange));
+              id(light_orange_color));
           it
             .filled_circle(
               halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + endAngle) * id(pi).state / 180),
               halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + endAngle) * id(pi).state / 180), 
               5, 
-              id(very_dark_grey));
+              id(very_dark_grey_color));
 
 
           for (int i = startAngle; i <= startAngle + firstStepAngle; i++) {
@@ -517,7 +490,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(my_light_yellow));
+                  id(light_yellow_color));
               it
                 .filled_triangle(
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
@@ -526,7 +499,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(my_light_yellow));
+                  id(light_yellow_color));
             }
 
           for (int i = startAngle + firstStepAngle; i <= startAngle + secondStepAngle; i++) {
@@ -538,7 +511,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(my_light_grey));
+                  id(light_grey_color));
               it
                 .filled_triangle(
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
@@ -547,7 +520,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(my_light_grey));
+                  id(light_grey_color));
             }
             for (int i = startAngle + secondStepAngle; i <= startAngle + endAngle; i++) {
               it
@@ -558,7 +531,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(very_dark_grey));
+                  id(very_dark_grey_color));
               it
                 .filled_triangle(
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
@@ -567,7 +540,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(very_dark_grey));
+                  id(very_dark_grey_color));
             }
           
           // Current temperature round
@@ -576,7 +549,7 @@ display:
                 halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + currentLightCircleAngle) * id(pi).state / 180),
                 halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + currentLightCircleAngle) * id(pi).state / 180), 
                 3, 
-                id(my_white));
+                id(white_color));
 
             // Start of the second step
             if (firstStepAngle < secondStepAngle) {
@@ -585,17 +558,17 @@ display:
                   halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
                   5, 
-                  id(my_white));
+                  id(white_color));
               it
                 .filled_circle(
                   halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
                   2, 
-                  id(very_dark_grey));
+                  id(very_dark_grey_color));
             } 
 
           it.printf(halfscreenwidth, halfscreenheight, id(roboto24), TextAlign::CENTER, "%d%%", map(id(new_light_brightness).state, 0, 255, 0, 100));
-          it.filled_circle(120, 200, 30, very_dark_grey);  // Central Circle
+          it.filled_circle(120, 200, 30, very_dark_grey_color);  // Central Circle
           it.image(120, 200, powercycle, ImageAlign::CENTER);        
       - id: WifiQR
         lambda: |-
@@ -605,7 +578,7 @@ display:
       - id: AirConPage
         lambda: |-
             // Variables
-            Color default_arc_color = id(my_light_yellow);
+            Color default_arc_color = id(light_yellow_color);
             float screenheight = it.get_height();
             float screenwidth = it.get_width();
             float halfscreenheight = screenheight / 2;
@@ -626,36 +599,36 @@ display:
             if (id(climatedevice).state == "cool")
             {
               // cooling
-              it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_blue);
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, light_blue_color);
               it.image(halfscreenwidth, halfscreenheight + -55, ac_cool_80, ImageAlign::TOP_CENTER); 
-              default_arc_color = id(my_ice_blue);
+              default_arc_color = id(ice_blue_color);
             }
             else if (id(climatedevice).state == "heat")
             {
               // heating
-              it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_red);
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, light_red_color);
               it.image(halfscreenwidth, halfscreenheight + -55, ac_heat_80, ImageAlign::TOP_CENTER);
-              default_arc_color = id(my_ice_red);
+              default_arc_color = id(ice_red_color);
             }
             else if (id(climatedevice).state == "auto")
             {
               // auto heat or cool
-              it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, light_orange_color);
               it.image(halfscreenwidth, halfscreenheight + -55, ac_heatcool_80, ImageAlign::TOP_CENTER);
-              default_arc_color = id(my_ice_orange);
+              default_arc_color = id(ice_orange_color);
             }
             else if (id(climatedevice).state == "fan_only")
             {
               // fan only
-              it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, light_orange_color);
               it.image(halfscreenwidth, halfscreenheight + -55, ac_fan_80, ImageAlign::TOP_CENTER);
             }
             else if (id(climatedevice).state == "dry")
             {
               // dry
-              it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_green);
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, green_color);
               it.image(halfscreenwidth, halfscreenheight + -55, ac_dry_80, ImageAlign::TOP_CENTER);
-              default_arc_color = id(my_ice_green);
+              default_arc_color = id(ice_green_color);
             }
    
 
@@ -684,7 +657,7 @@ display:
                 halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + endAngle) * id(pi).state / 180),
                 halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + endAngle) * id(pi).state / 180), 
                 5, 
-                id(very_dark_grey));
+                id(very_dark_grey_color));
 
             for (int i = startAngle; i <= startAngle + firstStepAngle; i++) {
               it
@@ -715,7 +688,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(my_white));
+                  id(white_color));
               it
                 .filled_triangle(
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
@@ -724,7 +697,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(my_white));
+                  id(white_color));
             }
             for (int i = startAngle + secondStepAngle; i <= startAngle + endAngle; i++) {
               it
@@ -735,7 +708,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(very_dark_grey));
+                  id(very_dark_grey_color));
               it
                 .filled_triangle(
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
@@ -744,7 +717,7 @@ display:
                   halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
                   halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                  id(very_dark_grey));
+                  id(very_dark_grey_color));
             }
 
             // Current temperature round
@@ -753,7 +726,7 @@ display:
                 halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + currentTemperatureCircleAngle) * id(pi).state / 180),
                 halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + currentTemperatureCircleAngle) * id(pi).state / 180), 
                 3, 
-                id(my_white));
+                id(white_color));
 
             // Start of the second step
             if (firstStepAngle < secondStepAngle) {
@@ -762,13 +735,13 @@ display:
                   halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
                   5, 
-                  id(my_white));
+                  id(white_color));
               it
                 .filled_circle(
                   halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
                   2, 
-                  id(very_dark_grey));
+                  id(very_dark_grey_color));
             } 
 
             // Target temperature round
@@ -777,16 +750,16 @@ display:
                 halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + targetTemperatureCircleAngle) * id(pi).state / 180),
                 halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + targetTemperatureCircleAngle) * id(pi).state / 180), 
                 7, 
-                id(very_dark_grey));
+                id(very_dark_grey_color));
             it
               .filled_circle(
                 halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + targetTemperatureCircleAngle) * id(pi).state / 180),
                 halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + targetTemperatureCircleAngle) * id(pi).state / 180), 
                 5, 
-                id(my_white));
+                id(white_color));
       - id: ClimateSettingsPage
         lambda: |- 
-          Color default_circle_color = id(very_dark_blue);
+          Color default_circle_color = id(very_dark_blue_color);
 
           Color heat_on = default_circle_color;
           Color cool_on = default_circle_color;
@@ -806,31 +779,31 @@ display:
           if (id(climatedevice).state == "cool")
           {
               // cooling
-              cool_on = my_light_blue;
+              cool_on = light_blue_color;
           }
           else if (id(climatedevice).state == "heat")
           {
               // heating
-              heat_on = my_light_red;
+              heat_on = light_red_color;
           }
           else if (id(climatedevice).state == "auto")
           { 
               // auto heat or cool
-              auto_on = my_light_orange;
+              auto_on = light_orange_color;
           }
           else if (id(climatedevice).state == "fan_only")
           {
               // fan only
-              fan_on =  my_light_orange;
+              fan_on =  light_orange_color;
           }
           else if (id(climatedevice).state == "dry")
           {
               // dry
-              dry_on = my_green;
+              dry_on = green_color;
           }
           else
           {
-            power_off = my_light_blue;
+            power_off = light_blue_color;
           }
 
           it.filled_circle(55, 85, 30, auto_on);  // Circle 5
@@ -875,13 +848,13 @@ display:
                 halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle) * id(pi).state / 180),
                 halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle) * id(pi).state / 180), 
                 5, 
-                id(my_light_orange));
+                id(light_orange_color));
             it
               .filled_circle(
                 halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + endAngle) * id(pi).state / 180),
                 halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + endAngle) * id(pi).state / 180), 
                 5, 
-                id(very_dark_grey));
+                id(very_dark_grey_color));
 
 
             for (int i = startAngle; i <= startAngle + firstStepAngle; i++) {
@@ -893,7 +866,7 @@ display:
                     halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
                     halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
                     halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                    id(my_light_yellow));
+                    id(light_yellow_color));
                 it
                   .filled_triangle(
                     halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
@@ -902,7 +875,7 @@ display:
                     halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
                     halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
                     halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                    id(my_light_yellow));
+                    id(light_yellow_color));
               }
 
             for (int i = startAngle + firstStepAngle; i <= startAngle + secondStepAngle; i++) {
@@ -914,7 +887,7 @@ display:
                     halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
                     halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
                     halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                    id(my_light_grey));
+                    id(light_grey_color));
                 it
                   .filled_triangle(
                     halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
@@ -923,7 +896,7 @@ display:
                     halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
                     halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
                     halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                    id(my_light_grey));
+                    id(light_grey_color));
               }
               for (int i = startAngle + secondStepAngle; i <= startAngle + endAngle; i++) {
                 it
@@ -934,7 +907,7 @@ display:
                     halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
                     halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
                     halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                    id(very_dark_grey));
+                    id(very_dark_grey_color));
                 it
                   .filled_triangle(
                     halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
@@ -943,7 +916,7 @@ display:
                     halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
                     halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
                     halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
-                    id(very_dark_grey));
+                    id(very_dark_grey_color));
               }
             
             // Current temperature round
@@ -952,7 +925,7 @@ display:
                   halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + currentCoverCircleAngle) * id(pi).state / 180),
                   halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + currentCoverCircleAngle) * id(pi).state / 180), 
                   3, 
-                  id(my_white));
+                  id(white_color));
 
               // Start of the second step
               if (firstStepAngle < secondStepAngle) {
@@ -961,18 +934,18 @@ display:
                     halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
                     halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
                     5, 
-                    id(my_white));
+                    id(white_color));
                 it
                   .filled_circle(
                     halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
                     halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
                     2, 
-                    id(very_dark_grey));
+                    id(very_dark_grey_color));
               } 
 
             it.printf(halfscreenwidth, halfscreenheight, id(roboto24), TextAlign::CENTER, "%s", id(cover_status).state.c_str());
             it.printf(halfscreenwidth, halfscreenheight + 30, id(roboto20), TextAlign::CENTER, "%0.f", id(new_cover_position).state);
-            // it.filled_circle(120, 200, 30, very_dark_grey);  // Central Circle
+            // it.filled_circle(120, 200, 30, very_dark_grey_color);  // Central Circle
             // it.image(120, 200, powercycle, ImageAlign::CENTER);
 
 qr_code:
