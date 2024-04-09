@@ -1,0 +1,51 @@
+color:
+  - id: white_color
+    hex: "FFFFFF"
+  - id: very_dark_grey_color
+    hex: "272828"
+  - id: light_grey_color
+    hex: "575858"
+
+  # Green Colors
+  - id: ice_green_color
+    hex: "8ab65e"
+  - id: ligt_green_color
+    hex: "6e914b"
+  - id: mid_green_color
+    hex: "526d38"
+  - id: dark_green_color
+    hex: "374825"
+
+  # Blue Colors
+  - id: ice_blue_color
+    hex: "739BD0"
+  - id: light_blue_color
+    hex: "5c7ca6"
+  - id: mid_blue_color
+    hex: "455d7c"
+  - id: dark_blue_color
+    hex: "2e3e53"
+
+  # Red Colors
+  - id: ice_red_color
+    hex: "fc6d6d"
+  - id: light_red_color
+    hex: "c95757"
+  - id: mid_red_color
+    hex: "974141"
+  - id: dark_red_color
+    hex: "642b2b"
+
+  # Orange Colors
+  - id: ice_orange_color
+    hex: "ef9c5d"
+  - id: light_orange_color
+    hex: "bf7c4a"
+  - id: mid_orange_color
+    hex: "8f5d37"
+  - id: dark_orange_color
+    hex: "5f3e25"
+
+  # Yellow Colors
+  - id: light_yellow_color
+    hex: "B58B00"
