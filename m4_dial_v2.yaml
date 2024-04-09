@@ -1,6 +1,6 @@
 esphome:
-  name: m5dial-2
-  friendly_name: M5Dial_2
+  name: m4dial
+  friendly_name: M4Dial
   on_boot:
     then:
      # read the RTC time once when the system boots
@@ -13,12 +13,6 @@ esphome:
               time_t currTime = id(my_time).now().timestamp;
               strftime(str, sizeof(str), "%Y-%M-%d %H:%M", localtime(&currTime));
               return  { str };
-
-substitutions:
-  # Add the ids of the devices you want to control here
-  light_control: light.great_room_dimmer_4
-  climate_control: climate.doris
-  cover_control: cover.sunshade
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -42,10 +36,16 @@ wifi:
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "M5Dial Lose Fallback Hotspot"
+    ssid: "M5Dial Fallback Hotspot"
     password: !secret m4fallbackpassword
 
 captive_portal:
+
+substitutions:
+  # Add the ids of the devices you want to control here
+  light_control: light.buffet_wled_3
+  climate_control: climate.doris
+  cover_control: cover.sunshade
 
 script:
   - id: my_light_brightness_script
@@ -121,165 +121,8 @@ rtttl:
   output: my_speaker_output
   id: my_rtttl
 
-color:
-
-  # Grey Gradients
-  - id: white_color
-    hex: 'FFFFFF'
-  - id: very_dark_grey_color
-    hex: '101111'
-  - id: light_grey_color
-    hex: '949494'
-
-  # Green Colors
-  - id: ice_green_color
-    hex: '59981a'
-  - id: green_color
-    hex: '3e6a12'
-
-  # Blue Colors
-  - id: light_blue_color
-    hex: '145DA0'
-  - id: ice_blue_color
-    hex: '739BD0'
-  - id: very_dark_blue_color
-    hex: '0C355C'
-
-  # Red Colors
-  - id: light_red_color
-    hex: 'b04c4c'
-  - id: ice_red_color
-    hex: 'fc6d6d'
-
-  # Orange Colors
-  - id: light_orange_color
-    hex: 'b15816'
-  - id: ice_orange_color
-    hex: 'fd7f20'
-
-  # Yellow Colors
-  - id: light_yellow_color
-    hex: 'B58B00'
-  
-  
-image:
-  - id: networkQR
-    file: images/m4dial/My_WiFi_QR_Code.png
-    resize: 160x160
-  - id: background
-    file: images/m4dial/background.png
-    type: RGBA
-  - id: switch_animated
-    file: images/m4dial/switch.gif
-    resize: 240x240
-  - id: volume_mute
-    file: mdi:volume-variant-off
-    resize: 40x40
-  - id: volume_notmute
-    file: mdi:volume-low
-    resize: 40x40
-  - id: downlighticon
-    file: mdi:light-recessed
-    resize: 80x80
-  - id: airconicon
-    file: mdi:air-conditioner
-    resize: 80X80
-  - id: ac_cool_40
-    file: mdi:snowflake
-    resize: 30x30
-  - id: ac_heatcool_40
-    file: mdi:sun-snowflake-variant
-    resize: 30x30
-  - id: ac_fan_40
-    file: mdi:fan
-    resize: 30x30
-  - id: power_off_icon_40
-    file: mdi:power-cycle
-    resize: 40x40
-  - id: ac_dry_40
-    file: mdi:water-percent
-    resize: 30x30
-  - id: ac_heat_40
-    file: mdi:fire
-    resize: 30x30
-  - id: temp_target_icon
-    file: mdi:thermometer
-    resize: 20x20
-  - id: temp_current_icon
-    file: mdi:bullseye
-    resize: 20x20
-  - id: ac_cool_80
-    file: mdi:snowflake
-    resize: 80x80
-  - id: ac_heatcool_80
-    file: mdi:sun-snowflake-variant
-    resize: 80x80
-  - id: ac_fan_80
-    file: mdi:fan
-    resize: 80x80
-  - id: power_off_icon_80
-    file: mdi:power-cycle
-    resize: 80x80
-  - id: ac_dry_80
-    file: mdi:water-percent
-    resize: 80x80
-  - id: ac_heat_80
-    file: mdi:fire
-    resize: 80x80
-  - id: volumeknob
-    file: mdi:knob
-    resize: 80x80
-  - id: infoicon
-    file: mdi:information
-    resize: 40x40
-  - id: zoneicon
-    file: mdi:air-filter
-    resize: 25x25
-  - id: volumeknob_60
-    file: mdi:knob
-    resize: 60x60
-  - id: airconicon_60
-    file: mdi:air-conditioner
-    resize: 50X50
-  - id: downlighticon_60
-    file: mdi:light-recessed
-    resize: 60x60
-  - id: downlighticon_menu_icon
-    file: mdi:light-recessed
-    resize: 30x30
-  - id: fan_menu_icon
-    file: mdi:fan
-    resize: 30x30
-  - id: audio_menu_icon
-    file: mdi:knob
-    resize: 30x30
-  - id: threed_printer_menu_icon
-    file: mdi:printer-3d-nozzle
-    resize: 30x30
-  - id: tv_menu_icon
-    file: mdi:television
-    resize: 30x30
-  - id: alarm_menu_icon
-    file: mdi:alarm-light
-    resize: 30x30
-  - id: settings_menu_icon
-    file: mdi:cog
-    resize: 30x30
-  - id: blind_icon
-    file: mdi:roller-shade
-  - id: powercycle
-    file: mdi:power-cycle
-    resize: 30x30
-  - id: wifi_menu_item
-    file: mdi:wifi-sync
-    resize: 30x30
-
-
-animation:
-  - id: my_animation
-    file: images/m4dial/switch.gif
-    resize: 100x100
-    use_transparency: True
+<<: !include common/colors.yaml
+<<: !include common/images.yaml
 
 font:
   - id: roboto16
@@ -308,6 +151,60 @@ spi:
   clk_pin: GPIO6
 
 number:
+  - platform: ld2410
+    timeout:
+      name: timeout
+    light_threshold:
+      name: light threshold
+    max_move_distance_gate:
+      name: max move distance gate
+    max_still_distance_gate:
+      name: max still distance gate
+    g0:
+      move_threshold:
+        name: g0 move threshold
+      still_threshold:
+        name: g0 still threshold
+    g1:
+      move_threshold:
+        name: g1 move threshold
+      still_threshold:
+        name: g1 still threshold
+    g2:
+      move_threshold:
+        name: g2 move threshold
+      still_threshold:
+        name: g2 still threshold
+    g3:
+      move_threshold:
+        name: g3 move threshold
+      still_threshold:
+        name: g3 still threshold
+    g4:
+      move_threshold:
+        name: g4 move threshold
+      still_threshold:
+        name: g4 still threshold
+    g5:
+      move_threshold:
+        name: g5 move threshold
+      still_threshold:
+        name: g5 still threshold
+    g6:
+      move_threshold:
+        name: g6 move threshold
+      still_threshold:
+        name: g6 still threshold
+    g7:
+      move_threshold:
+        name: g7 move threshold
+      still_threshold:
+        name: g7 still threshold
+    g8:
+      move_threshold:
+        name: g8 move threshold
+      still_threshold:
+        name: g8 still threshold
 
   - platform: template
     id: new_cover_position
@@ -399,8 +296,8 @@ display:
     pages:
       - id: TestPage
         lambda: |- 
-          Color bground_ac = id(very_dark_blue_color);
-          Color default_circle_color = id (very_dark_blue_color);
+          Color bground_ac = id(dark_blue_color);
+          Color default_circle_color = id (dark_blue_color);
           Color centre_circle_color = id (light_blue_color);
 
           if (id(climatedevice).state == "cool")
@@ -424,7 +321,7 @@ display:
           else if (id(climatedevice).state == "dry")
           {
             // dry
-            bground_ac = green_color;
+            bground_ac = mid_green_color;
           }
           it.image(120, 120, background, ImageAlign::CENTER);
           it.filled_circle(120, 120, 30, centre_circle_color);  // Central Circle
@@ -626,7 +523,7 @@ display:
             else if (id(climatedevice).state == "dry")
             {
               // dry
-              it.filled_circle(halfscreenwidth, halfscreenheight, 120, green_color);
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, mid_green_color);
               it.image(halfscreenwidth, halfscreenheight + -55, ac_dry_80, ImageAlign::TOP_CENTER);
               default_arc_color = id(ice_green_color);
             }
@@ -759,7 +656,7 @@ display:
                 id(white_color));
       - id: ClimateSettingsPage
         lambda: |- 
-          Color default_circle_color = id(very_dark_blue_color);
+          Color default_circle_color = id(dark_blue_color);
 
           Color heat_on = default_circle_color;
           Color cool_on = default_circle_color;
@@ -799,7 +696,7 @@ display:
           else if (id(climatedevice).state == "dry")
           {
               // dry
-              dry_on = green_color;
+              dry_on = mid_green_color;
           }
           else
           {
@@ -1136,7 +1033,7 @@ sensor:
   - platform: homeassistant
     id: cover_current_position
     entity_id: $cover_control
-    attribute: 	current_position
+    attribute: current_position
     on_value:
       if:
         condition:
@@ -1296,7 +1193,7 @@ sensor:
             else:
               - light.turn_off: 
                   id: backlight
-                  transition_length: 1s           
+                  transition_length: 1s     
     light:
       name: light
     moving_distance:
@@ -1307,6 +1204,54 @@ sensor:
       name: Move Energy
     still_energy:
       name: Still Energy
+    g0:
+        move_energy:
+          name: g0 move energy
+        still_energy:
+          name: g0 still energy
+    g1:
+      move_energy:
+        name: g1 move energy
+      still_energy:
+        name: g1 still energy
+    g2:
+      move_energy:
+        name: g2 move energy
+      still_energy:
+        name: g2 still energy
+    g3:
+      move_energy:
+        name: g3 move energy
+      still_energy:
+        name: g3 still energy
+    g4:
+      move_energy:
+        name: g4 move energy
+      still_energy:
+        name: g4 still energy
+    g5:
+      move_energy:
+        name: g5 move energy
+      still_energy:
+        name: g5 still energy
+    g6:
+      move_energy:
+        name: g6 move energy
+      still_energy:
+        name: g6 still energy
+    g7:
+      move_energy:
+        name: g7 move energy
+      still_energy:
+        name: g7 still energy
+    g8:
+      move_energy:
+        name: g8 move energy
+      still_energy:
+        name: g8 still energy
+          
+         
+
 
   - platform: homeassistant
     name: "Dimmer Light Brightness"
