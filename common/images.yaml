@@ -1,0 +1,111 @@
+image:
+  - id: networkQR
+    file: images/m4dial/My_WiFi_QR_Code.png
+    resize: 160x160
+  - id: background
+    file: images/m4dial/background.png
+    type: RGBA
+  - id: switch_animated
+    file: images/m4dial/switch.gif
+    resize: 240x240
+  - id: volume_mute
+    file: mdi:volume-variant-off
+    resize: 40x40
+  - id: volume_notmute
+    file: mdi:volume-low
+    resize: 40x40
+  - id: downlighticon
+    file: mdi:light-recessed
+    resize: 80x80
+  - id: airconicon
+    file: mdi:air-conditioner
+    resize: 80X80
+  - id: ac_cool_40
+    file: mdi:snowflake
+    resize: 30x30
+  - id: ac_heatcool_40
+    file: mdi:sun-snowflake-variant
+    resize: 30x30
+  - id: ac_fan_40
+    file: mdi:fan
+    resize: 30x30
+  - id: power_off_icon_40
+    file: mdi:power-cycle
+    resize: 40x40
+  - id: ac_dry_40
+    file: mdi:water-percent
+    resize: 30x30
+  - id: ac_heat_40
+    file: mdi:fire
+    resize: 30x30
+  - id: temp_target_icon
+    file: mdi:thermometer
+    resize: 20x20
+  - id: temp_current_icon
+    file: mdi:bullseye
+    resize: 20x20
+  - id: ac_cool_80
+    file: mdi:snowflake
+    resize: 80x80
+  - id: ac_heatcool_80
+    file: mdi:sun-snowflake-variant
+    resize: 80x80
+  - id: ac_fan_80
+    file: mdi:fan
+    resize: 80x80
+  - id: power_off_icon_80
+    file: mdi:power-cycle
+    resize: 80x80
+  - id: ac_dry_80
+    file: mdi:water-percent
+    resize: 80x80
+  - id: ac_heat_80
+    file: mdi:fire
+    resize: 80x80
+  - id: volumeknob
+    file: mdi:knob
+    resize: 80x80
+  - id: infoicon
+    file: mdi:information
+    resize: 40x40
+  - id: zoneicon
+    file: mdi:air-filter
+    resize: 25x25
+  - id: volumeknob_60
+    file: mdi:knob
+    resize: 60x60
+  - id: airconicon_60
+    file: mdi:air-conditioner
+    resize: 50X50
+  - id: downlighticon_60
+    file: mdi:light-recessed
+    resize: 60x60
+  - id: downlighticon_menu_icon
+    file: mdi:light-recessed
+    resize: 30x30
+  - id: fan_menu_icon
+    file: mdi:fan
+    resize: 30x30
+  - id: audio_menu_icon
+    file: mdi:knob
+    resize: 30x30
+  - id: threed_printer_menu_icon
+    file: mdi:printer-3d-nozzle
+    resize: 30x30
+  - id: tv_menu_icon
+    file: mdi:television
+    resize: 30x30
+  - id: alarm_menu_icon
+    file: mdi:alarm-light
+    resize: 30x30
+  - id: settings_menu_icon
+    file: mdi:cog
+    resize: 30x30
+  - id: blind_icon
+    file: mdi:roller-shade
+  - id: powercycle
+    file: mdi:power-cycle
+    resize: 30x30
+  - id: wifi_menu_item
+    file: mdi:wifi-sync
+    resize: 30x30
