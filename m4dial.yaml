@@ -13,54 +13,81 @@ esphome:
               time_t currTime = id(my_time).now().timestamp;
               strftime(str, sizeof(str), "%Y-%M-%d %H:%M", localtime(&currTime));
               return  { str };
-  # BEEP GPIO3
-  # RGBLED GPIO21
-  
-globals:
-  - id: screenwidth
-    type: int
-    restore_value: no
-  - id: max_rotary_value
-    type: int
-    restore_value: no
-    initial_value: '1'
-  - id: min_rotary_value
-    type: int
-    restore_value: no
-    initial_value: '100'
 
-external_components:
-#  - source: github://bearpawmaxim/esphome@pr3625fix
-#    components: [gc9a01]
-#    refresh: 0s
-  - source: github://dgaust/esphome@gc9a01
-    components: [ ft3267, gc9a01 ]
-    refresh: 0s
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: DEBUG
+
+api:
+  encryption:
+    key: !secret m4dialencryption
+
+ota:
+  platform: esphome
+  password: !secret m4dialotapassword
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "M5Dial Fallback Hotspot"
+    password: !secret m4fallbackpassword
+
+captive_portal:
+
+substitutions:
+  # Add the ids of the devices you want to control here
+  light_control: light.buffet_wled_3
+  climate_control: climate.doris
+  cover_control: cover.sunshade
+
+script:
+  - id: my_light_brightness_script
+    mode: restart
+    then:
+      - delay: 500ms
+      - homeassistant.service:
+          service: light.turn_on
+          data_template:
+            entity_id: $light_control
+            brightness: !lambda 'return id(new_light_brightness).state;'
+
+  - id: my_climate_temperature_script
+    mode: restart
+    then:
+      - delay: 750ms
+      - homeassistant.service:
+          service: climate.set_temperature
+          data_template:
+            entity_id: $climate_control
+            temperature: !lambda return (id(temperature_new_setpoint).state);
+  
+  - id: my_cover_script
+    mode: restart
+    then:
+      - delay: 500ms
+      - homeassistant.service:
+          service: cover.set_cover_position
+          data_template:
+            entity_id: $cover_control
+            position: !lambda return (id(new_cover_position).state);
 
 i2c:
   - id: bus_internal
     sda: GPIO11
     scl: GPIO12
     scan: False
-    frequency: 400kHz
-#  - id: bus_porta
-#    sda: 13
-#    scl: 15
-#  interrupt: 16
-
-#ft3267_touchscreen:
-#  id: ft3267_touch
-#  address: 0x38
-#  interrupt_pin: GPIO14
-#  on_touch:
-#    then:
-#      - logger.log:
-#          format: Touch %d at (%d, %d)
-#          args: [touch.id, touch.x, touch.y]
-#      - display.page.show_next: my_lcd
 
 touchscreen:
-  platform: ft3267
+  platform: ft5x06
+  address: 0x38
 
 time:
   - platform: pcf8563
@@ -79,16 +106,6 @@ time:
               strftime(str, sizeof(str), "%Y-%m-%d %H:%M", localtime(&currTime));
               return  { str };
 
-esp32:
-  board: esp32-s3-devkitc-1
-  framework:
-    type: arduino
-
-# Enable logging
-logger:
-  level: DEBUG
-
-
 rc522_i2c:
   i2c_id:  bus_internal
   address: 0x28
@@ -101,109 +118,8 @@ rtttl:
   output: my_speaker_output
   id: my_rtttl
 
-color:
-  - id: black
-    hex: '000000'
-  - id: dark_green
-    hex: '013208'
-  - id: my_red
-    red: 100%
-    green: 3%
-    blue: 5%
-  - id: my_green
-    hex: 59981A
-  - id: my_blue
-    red: 3%
-    green: 5%
-    blue: 100%
-  - id: my_yellow
-    hex: FFFF00 
-  - id: my_light_blue
-    hex: 145DA0
-  - id: my_light_red
-    hex: fc6d6d
-  - id: my_light_orange
-    hex: FD7F20
-  - id: my_light_yellow
-    hex: B58B00
-  - id: dark_blue
-    hex: '000040'
-  - id: dark_red
-    hex: '67091C'
-
-image:
-  - file: mdi:volume-variant-off
-    id: volume_mute
-    resize: 40x40
-  - file: mdi:volume-low
-    id: volume_notmute
-    resize: 40x40
-  - file: mdi:light-recessed
-    id: downlighticon
-    resize: 80x80
-  - file: mdi:air-conditioner
-    id: airconicon
-    resize: 80X80
-  - file: mdi:snowflake
-    id: ac_cool_40
-    resize: 40x40
-  - file: mdi:sun-snowflake-variant
-    id: ac_heatcool_40
-    resize: 40x40
-  - file: mdi:fan
-    id: ac_fan_40
-    resize: 40x40
-  - file: mdi:power-cycle
-    id: power_off_icon_40
-    resize: 40x40
-  - file: mdi:water-percent
-    id: ac_dry_40
-    resize: 40x40
-  - file: mdi:fire
-    id: ac_heat_40
-    resize: 40x40
-  - file: mdi:thermometer
-    id: temp_target_icon
-    resize: 20x20
-  - file: mdi:bullseye
-    id: temp_current_icon
-    resize: 20x20
-  - file: mdi:snowflake
-    id: ac_cool_80
-    resize: 80x80
-  - file: mdi:sun-snowflake-variant
-    id: ac_heatcool_80
-    resize: 80x80
-  - file: mdi:fan
-    id: ac_fan_80
-    resize: 80x80
-  - file: mdi:power-cycle
-    id: power_off_icon_80
-    resize: 80x80
-  - file: mdi:water-percent
-    id: ac_dry_80
-    resize: 80x80
-  - file: mdi:fire
-    id: ac_heat_80
-    resize: 80x80
-  - file: mdi:knob
-    id: volumeknob
-    resize: 80x80
-  - file: mdi:information
-    id: infoicon
-    resize: 40x40
-  - file: mdi:air-filter
-    id: zoneicon
-    resize: 25x25
-  - file: mdi:knob
-    id: volumeknob_60
-    resize: 60x60
-  - file: mdi:air-conditioner
-    id: airconicon_60
-    resize: 50X50
-  - file: mdi:light-recessed
-    id: downlighticon_60
-    resize: 60x60
+<<: !include common/colors.yaml
+<<: !include common/images.yaml
 
 font:
   - id: roboto16
@@ -218,29 +134,6 @@ font:
     file: "gfonts://Roboto"   
     size: 24
 
-# Enable Home Assistant API
-api:
-  encryption:
-    key: !secret m4dialencryption
-
-ota:
-  password: !secret m4dialotapassword
-
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  manual_ip:
-    static_ip: 10.0.0.237
-    gateway: 10.0.0.1
-    subnet: 255.255.255.0
-
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "M4Dial Fallback Hotspot"
-    password: !secret m4fallbackpassword
-
-captive_portal:
-
 uart:
   tx_pin: GPIO2
   rx_pin: GPIO1
@@ -254,270 +147,869 @@ spi:
   mosi_pin: GPIO5
   clk_pin: GPIO6
 
-display:
-- platform: gc9a01
-  reset_pin: GPIO8
-  id: my_lcd
-  cs_pin: GPIO7
-  dc_pin: GPIO4
-  rotation: 90
-  width: 240
-  height: 240
-  update_interval: 1s
-  pages:
-    - id: MenuPage
-      lambda: |-
-        float screenheight = it.get_height();
-        float screenwidth = it.get_width();
-        float halfscreenheight = screenheight / 2;
-        float halfscreenwidth = screenwidth /2;
+number:
+  - platform: ld2410
+    timeout:
+      name: timeout
+    light_threshold:
+      name: light threshold
+    max_move_distance_gate:
+      name: max move distance gate
+    max_still_distance_gate:
+      name: max still distance gate
+    g0:
+      move_threshold:
+        name: g0 move threshold
+      still_threshold:
+        name: g0 still threshold
+    g1:
+      move_threshold:
+        name: g1 move threshold
+      still_threshold:
+        name: g1 still threshold
+    g2:
+      move_threshold:
+        name: g2 move threshold
+      still_threshold:
+        name: g2 still threshold
+    g3:
+      move_threshold:
+        name: g3 move threshold
+      still_threshold:
+        name: g3 still threshold
+    g4:
+      move_threshold:
+        name: g4 move threshold
+      still_threshold:
+        name: g4 still threshold
+    g5:
+      move_threshold:
+        name: g5 move threshold
+      still_threshold:
+        name: g5 still threshold
+    g6:
+      move_threshold:
+        name: g6 move threshold
+      still_threshold:
+        name: g6 still threshold
+    g7:
+      move_threshold:
+        name: g7 move threshold
+      still_threshold:
+        name: g7 still threshold
+    g8:
+      move_threshold:
+        name: g8 move threshold
+      still_threshold:
+        name: g8 still threshold
 
-        it.filled_rectangle(0, 0, 120, 120, my_light_orange);
-        it.filled_rectangle(120, 0, 240, 120, dark_red);   
-
-        it.filled_rectangle(0, 120, 120, 240, dark_green);   
-        it.filled_rectangle(120, 120, 240, 240, dark_blue);
-              
-        it.line(0, halfscreenheight, screenwidth, halfscreenheight);
-        it.line(halfscreenwidth, 0, halfscreenwidth, screenheight);
-
-        it.image(halfscreenwidth - 50, halfscreenheight - 75, airconicon_60, ImageAlign::TOP_CENTER);
-        it.image(halfscreenwidth + 50, halfscreenheight + 30, airconicon_60, ImageAlign::TOP_CENTER);
-        it.image(halfscreenwidth + 50, halfscreenheight - 80, downlighticon_60, ImageAlign::TOP_CENTER);
-        it.image(halfscreenwidth - 50, halfscreenheight + 25, volumeknob_60, ImageAlign::TOP_CENTER);
-    - id: page1
-      lambda: |-
-        float screenheight = it.get_height();
-        float screenwidth = it.get_width();
-        float halfscreenheight = screenheight / 2;
-        float halfscreenwidth = screenwidth /2;
-        if (id(dimmersensor).state == "ON")
-        {
-          it.start_clipping(0, (id(dimmersensor_brightness).state * -1) + 255, 250, 250);
-          it.filled_circle(halfscreenwidth, screenheight, 255, my_light_yellow);
-          it.end_clipping();
-        }
-        it.image(halfscreenwidth, halfscreenheight - 55, downlighticon, ImageAlign::TOP_CENTER);
-        it.printf(halfscreenwidth, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%s", id(dimmersensor).state.c_str()); 
-        it.filled_circle(halfscreenwidth - 18, 225, 3);
-        it.circle(halfscreenwidth -6, 225, 3);
-        it.circle(halfscreenwidth +6, 225, 3);
-        it.circle(halfscreenwidth +18, 225, 3);
-        it.start_clipping(0, 180, 250, 250);
-        it.filled_circle(screenwidth, screenheight, 255, dark_blue);
-        it.end_clipping();
-    - id: page2
-      lambda: |-
-        float screenheight = it.get_height();
-        float screenwidth = it.get_width();
-        float halfscreenheight = screenheight / 2;
-        float halfscreenwidth = screenwidth /2;
-        if (id(climatedevice).state == "cool")
-        {
-          // cooling
-          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_blue);
-          it.image(halfscreenwidth, halfscreenheight + -55, ac_cool_80, ImageAlign::TOP_CENTER); 
-        }
-        else if (id(climatedevice).state == "heat")
-        {
-          // heating
-          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_red);
-          it.image(halfscreenwidth, halfscreenheight + -55, ac_heat_80, ImageAlign::TOP_CENTER);
-        }
-        else if (id(climatedevice).state == "auto")
-        {
-          // auto heat or cool
-          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
-          it.image(halfscreenwidth, halfscreenheight + -55, ac_heatcool_80, ImageAlign::TOP_CENTER);
-        }
-        else if (id(climatedevice).state == "fan_only")
-        {
-          // fan only
-          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_light_orange);
-          it.image(halfscreenwidth, halfscreenheight + -55, ac_fan_80, ImageAlign::TOP_CENTER);
-        }
-        else if (id(climatedevice).state == "dry")
-        {
-          // dry
-          it.filled_circle(halfscreenwidth, halfscreenheight, 120, my_green);
-          // it.image(halfscreenwidth - 80, halfscreenheight - 20, ac_dry_40, ImageAlign::TOP_CENTER);
-          it.image(halfscreenwidth, halfscreenheight + -55, ac_dry_80, ImageAlign::TOP_CENTER);
-        }
-        else if (id(climatedevice).state == "off")
-        {
-          // off
-          it.image(halfscreenwidth, halfscreenheight - 55, power_off_icon_80, ImageAlign::TOP_CENTER);
-        }
-        it.printf(halfscreenwidth, halfscreenheight - 95, id(roboto24), TextAlign::TOP_CENTER, "Air-Con");
-        it.printf(halfscreenwidth + 10, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_setpoint).state); 
-        it.printf(halfscreenwidth + 10, halfscreenheight + 65, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climatedevice_currenttemp).state); 
-        
-        if (id(climatedevice).state != "off")
-        {
-          it.image(halfscreenwidth - 95, halfscreenheight - 2, zoneicon, ImageAlign::TOP_CENTER);
-          it.printf(halfscreenwidth - 75, halfscreenheight, id(roboto20), TextAlign::TOP_CENTER, "%s", id(zones_open).state.c_str()); 
-        }
-        
-        it.line(halfscreenwidth - 40, halfscreenheight + 65, it.get_width() / 2 + 40, it.get_height() / 2 + 65);
-        it.image(halfscreenwidth - 30, halfscreenheight + 40, temp_current_icon, ImageAlign::TOP_CENTER);
-        it.image(halfscreenwidth - 30, halfscreenheight + 70, temp_target_icon, ImageAlign::TOP_CENTER);
-        
-        it.circle(halfscreenwidth - 18, 225, 3);
-        it.filled_circle(halfscreenwidth -6, 225, 3);
-        it.circle(halfscreenwidth +6, 225, 3);
-        it.circle(halfscreenwidth +18, 225, 3);
-    - id: page3
-      lambda: |-
-        float screenheight = it.get_height();
-        float screenwidth = it.get_width();
-        float halfscreenheight = screenheight / 2;
-        float halfscreenwidth = screenwidth /2;
-        if (id(mediaplayermute).state == "on")
-        {
-          it.image(halfscreenwidth + 80, halfscreenwidth -25, volume_mute, ImageAlign::TOP_CENTER);
-        }
-        else
-        {
-          it.image(halfscreenwidth + 80, halfscreenheight -25, volume_notmute, ImageAlign::TOP_CENTER);
-        }
-        it.image(halfscreenwidth, halfscreenheight - 55, volumeknob, ImageAlign::TOP_CENTER);
-        it.printf(halfscreenwidth, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f%%", id(beam_volume).state * 100); 
-        it.circle(halfscreenwidth - 18, 225, 3);
-        it.circle(halfscreenwidth -6, 225, 3);
-        it.filled_circle(halfscreenwidth +6, 225, 3);
-        it.circle(halfscreenwidth +18, 225, 3);
-    - id: page4
-      lambda: |-
-        float screenheight = it.get_height();
-        float screenwidth = it.get_width();
-        float halfscreenheight = screenheight / 2;
-        float halfscreenwidth = screenwidth /2;
-        it.image(halfscreenwidth, halfscreenheight - 55, infoicon, ImageAlign::TOP_CENTER);
-        it.printf(halfscreenwidth, halfscreenheight + 0, id(roboto20), TextAlign::TOP_CENTER, "IP: %s", id(espip).state.c_str()); 
-        it.circle(halfscreenwidth - 18, 225, 3);
-        it.circle(halfscreenwidth -6, 225, 3);
-        it.circle(halfscreenwidth +6, 225, 3);
-        it.filled_circle(halfscreenwidth +18, 225, 3);
+  - platform: template
+    id: new_cover_position
+    initial_value: 0
+    min_value: 0
+    max_value: 100
+    step: 1
+    optimistic: True
     
-      
-  on_page_change:
-      - to: page1
-        then:
-          - sensor.rotary_encoder.set_value:
-              id: rotaryencoder
-              value: !lambda return (id(dimmersensor_brightness).state / 255) * 100;
-          - component.update: my_lcd
-      - to: page2
-        then:
-          - sensor.rotary_encoder.set_value:
-              id: rotaryencoder
-              value: !lambda return id(climatedevice_setpoint).state;
-          - component.update: my_lcd
-      - to: page3
-        then:
-          - sensor.rotary_encoder.set_value:
-              id: rotaryencoder
-              value: !lambda 'return id(beam_volume).state * 100;'
-          - component.update: my_lcd
+  - platform: template
+    id: new_light_brightness
+    initial_value: 0
+    min_value: 0
+    max_value: 255
+    step: 1
+    optimistic: true  
+
+  - platform: template
+    id: temperature_new_setpoint
+    initial_value: 0
+    min_value: 7
+    max_value: 31
+    step: 1
+    optimistic: true
+
+  - platform: template
+    id: temperature_current_template
+    initial_value: 0
+    min_value: 7
+    max_value: 31
+    step: 1
+    optimistic: true
+    
+  - platform: template
+    id: pi
+    internal: true
+    optimistic: true
+    min_value: 3.14159265359
+    max_value: 3.14159265360
+    step: 0.00000000001
+    initial_value: 3.14159265359
+
+  - platform: template
+    id: climate_icon_distance_radius
+    internal: true
+    optimistic: true
+    min_value: 0
+    max_value: 1
+    step: 0.01
+    initial_value: 0.6
+
+  - platform: template
+    id: climate_icon_separation_angle
+    internal: true
+    optimistic: true
+    min_value: 30
+    max_value: 60
+    step: 1
+    initial_value: 55
+
+  - platform: template
+    id: climate_bottom_gauge_angle
+    internal: true
+    optimistic: true
+    min_value: 30
+    max_value: 180
+    step: 1
+    initial_value: 70
+
+  - platform: template
+    id: climate_temperature_distance_from_center
+    internal: true
+    optimistic: true
+    min_value: 0
+    max_value: 40
+    step: 1
+    initial_value: 20
+
+display:
+  - platform: ili9xxx
+    model: gc9a01a
+    reset_pin: GPIO8
+    id: my_lcd
+    cs_pin: GPIO7
+    dc_pin: GPIO4
+    dimensions: 
+      height: 240
+      width: 240
+    pages:
+      - id: TestPage
+        lambda: |- 
+          Color bground_ac = id(dark_blue_color);
+          Color default_circle_color = id (dark_blue_color);
+          Color centre_circle_color = id (light_blue_color);
+
+          if (id(climatedevice).state == "cool")
+          {
+            // cooling
+            bground_ac = light_blue_color;
+          }
+          else if (id(climatedevice).state == "heat")
+          {
+            // heating
+            bground_ac = light_red_color;
+          }
+          else if (id(climatedevice).state == "auto")
+          {
+            bground_ac = light_orange_color;
+          }
+          else if (id(climatedevice).state == "fan_only")
+          {
+             bground_ac = light_orange_color;
+          }
+          else if (id(climatedevice).state == "dry")
+          {
+            // dry
+            bground_ac = mid_green_color;
+          }
+          it.image(120, 120, background, ImageAlign::CENTER);
+          it.filled_circle(120, 120, 30, centre_circle_color);  // Central Circle
+          it.image(120, 120, downlighticon_menu_icon, ImageAlign::CENTER);
+        
+          it.filled_circle(190, 120, 30, default_circle_color);  // Circle 2
+          it.image(190, 120, blind_icon, ImageAlign::CENTER);
+
+          it.filled_circle(155, 181, 30, default_circle_color);  // Circle 3
+          it.image(155, 181, wifi_menu_item, ImageAlign::CENTER);
+        
+          it.filled_circle(85, 181, 30, default_circle_color);  // Circle 4
+          it.image(85, 181, tv_menu_icon, ImageAlign::CENTER);
+
+          it.filled_circle(50, 120, 30, default_circle_color);  // Circle 5
+          it.image(50, 120, alarm_menu_icon, ImageAlign::CENTER);
+
+          it.filled_circle(85, 59, 30, bground_ac);   // Circle 6
+          it.image(85, 59, fan_menu_icon, ImageAlign::CENTER);
+       
+          it.filled_circle(155, 59, 30, default_circle_color); // Circle 7     
+          it.image(155, 59, audio_menu_icon, ImageAlign::CENTER);  
+      - id: FirstPage
+        lambda: |-
+          float screenheight = it.get_height();
+          float screenwidth = it.get_width();
+          float halfscreenheight = screenheight / 2;
+          float halfscreenwidth = screenwidth / 2;
+
+          it.image(120, 120, background, ImageAlign::CENTER);
+          int centerX = 120;  // X-coordinate of the circle center
+          int centerY = 120;  // Y-coordinate of the circle center
+
+          float currentLightCircleAngle = (360 - id(climate_bottom_gauge_angle).state) * (id(new_light_brightness).state / 255);
+          float targetLightCircleAngle = (360 - id(climate_bottom_gauge_angle).state) * (id(dimmersensor_brightness).state / 255);
+            
+          float startAngle = id(climate_bottom_gauge_angle).state / 2;
+          float firstStepAngle = (currentLightCircleAngle < targetLightCircleAngle) ? currentLightCircleAngle : targetLightCircleAngle;
+          float secondStepAngle = (currentLightCircleAngle > targetLightCircleAngle) ? firstStepAngle : targetLightCircleAngle;
+          float endAngle = 360 - id(climate_bottom_gauge_angle).state;
+
+          // Display temperature arc circle
+          it
+            .filled_circle(
+              halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle) * id(pi).state / 180),
+              halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle) * id(pi).state / 180), 
+              5, 
+              id(light_orange_color));
+          it
+            .filled_circle(
+              halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + endAngle) * id(pi).state / 180),
+              halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + endAngle) * id(pi).state / 180), 
+              5, 
+              id(very_dark_grey_color));
+
+
+          for (int i = startAngle; i <= startAngle + firstStepAngle; i++) {
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + i) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(light_yellow_color));
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(light_yellow_color));
+            }
+
+          for (int i = startAngle + firstStepAngle; i <= startAngle + secondStepAngle; i++) {
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + i) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(light_grey_color));
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(light_grey_color));
+            }
+            for (int i = startAngle + secondStepAngle; i <= startAngle + endAngle; i++) {
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + i) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(very_dark_grey_color));
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(very_dark_grey_color));
+            }
+          
+          // Current temperature round
+            it
+              .filled_circle(
+                halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + currentLightCircleAngle) * id(pi).state / 180),
+                halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + currentLightCircleAngle) * id(pi).state / 180), 
+                3, 
+                id(white_color));
+
+            // Start of the second step
+            if (firstStepAngle < secondStepAngle) {
+              it
+                .filled_circle(
+                  halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
+                  5, 
+                  id(white_color));
+              it
+                .filled_circle(
+                  halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
+                  2, 
+                  id(very_dark_grey_color));
+            } 
+
+          it.printf(halfscreenwidth, halfscreenheight, id(roboto24), TextAlign::CENTER, "%d%%", map(id(new_light_brightness).state, 0, 255, 0, 100));
+          it.filled_circle(120, 200, 30, very_dark_grey_color);  // Central Circle
+          it.image(120, 200, powercycle, ImageAlign::CENTER);        
+      - id: WifiQR
+        lambda: |-
+          // Draw the QR-code at position [x=50,y=0] with white color and a 2x scale
+          it.image(120, 120, networkQR, ImageAlign::CENTER);
+          it.printf(120, 200, id(roboto20), TextAlign::CENTER, "Password: 26Doris");
+      - id: AirConPage
+        lambda: |-
+            // Variables
+            Color default_arc_color = id(light_yellow_color);
+            float screenheight = it.get_height();
+            float screenwidth = it.get_width();
+            float halfscreenheight = screenheight / 2;
+            float halfscreenwidth = screenwidth / 2;
+
+            // float currentTemperatureCircleAngle = (360 - id(climate_bottom_gauge_angle).state) * ((id(climatedevice_currenttemp).state - id(climate_min_temperature).state) / (id(climate_max_temperature).state - id(climate_min_temperature).state));
+            float currentTemperatureCircleAngle = (360 - id(climate_bottom_gauge_angle).state) * ((id(climatedevice_currenttemp).state - id(climate_min_temperature).state) / (id(climate_max_temperature).state - id(climate_min_temperature).state));
+            
+            // float targetTemperatureCircleAngle = (360 - id(climate_bottom_gauge_angle).state) * ((id(climatedevice_setpoint).state - id(climate_min_temperature).state) / (id(climate_max_temperature).state - id(climate_min_temperature).state));
+            float targetTemperatureCircleAngle = (360 - id(climate_bottom_gauge_angle).state) * ((id(temperature_new_setpoint).state - id(climate_min_temperature).state) / (id(climate_max_temperature).state - id(climate_min_temperature).state));
+            
+            float startAngle = id(climate_bottom_gauge_angle).state / 2;
+            float firstStepAngle = (currentTemperatureCircleAngle < targetTemperatureCircleAngle) ? currentTemperatureCircleAngle : targetTemperatureCircleAngle;
+            float secondStepAngle = (currentTemperatureCircleAngle > targetTemperatureCircleAngle) ? firstStepAngle : targetTemperatureCircleAngle;
+            float endAngle = 360 - id(climate_bottom_gauge_angle).state;
+
+            it.image(120, 120, background, ImageAlign::CENTER);
+            if (id(climatedevice).state == "cool")
+            {
+              // cooling
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, light_blue_color);
+              it.image(halfscreenwidth, halfscreenheight + -55, ac_cool_80, ImageAlign::TOP_CENTER); 
+              default_arc_color = id(ice_blue_color);
+            }
+            else if (id(climatedevice).state == "heat")
+            {
+              // heating
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, light_red_color);
+              it.image(halfscreenwidth, halfscreenheight + -55, ac_heat_80, ImageAlign::TOP_CENTER);
+              default_arc_color = id(ice_red_color);
+            }
+            else if (id(climatedevice).state == "auto")
+            {
+              // auto heat or cool
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, light_orange_color);
+              it.image(halfscreenwidth, halfscreenheight + -55, ac_heatcool_80, ImageAlign::TOP_CENTER);
+              default_arc_color = id(ice_orange_color);
+            }
+            else if (id(climatedevice).state == "fan_only")
+            {
+              // fan only
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, light_orange_color);
+              it.image(halfscreenwidth, halfscreenheight + -55, ac_fan_80, ImageAlign::TOP_CENTER);
+            }
+            else if (id(climatedevice).state == "dry")
+            {
+              // dry
+              it.filled_circle(halfscreenwidth, halfscreenheight, 120, mid_green_color);
+              it.image(halfscreenwidth, halfscreenheight + -55, ac_dry_80, ImageAlign::TOP_CENTER);
+              default_arc_color = id(ice_green_color);
+            }
+   
+
+            it.printf(halfscreenwidth + 10, halfscreenheight + 35, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(temperature_new_setpoint).state); 
+            it.printf(halfscreenwidth + 10, halfscreenheight + 65, id(roboto24), TextAlign::TOP_CENTER, "%.0f", id(climate_current_temperature).state); 
+          
+            if (id(climatedevice).state != "off")
+            {
+              it.image(halfscreenwidth - 75, halfscreenheight - 15, zoneicon, ImageAlign::TOP_CENTER);
+              it.printf(halfscreenwidth - 55, halfscreenheight -13, id(roboto20), TextAlign::TOP_CENTER, "%s", id(zones_open).state.c_str()); 
+            }
+          
+            it.line(halfscreenwidth - 40, halfscreenheight + 65, it.get_width() / 2 + 40, it.get_height() / 2 + 65);
+            it.image(halfscreenwidth - 30, halfscreenheight + 40, temp_current_icon, ImageAlign::TOP_CENTER);
+            it.image(halfscreenwidth - 30, halfscreenheight + 70, temp_target_icon, ImageAlign::TOP_CENTER);
+
+            // Display temperature arc circle
+            it
+              .filled_circle(
+                halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle) * id(pi).state / 180),
+                halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle) * id(pi).state / 180), 
+                5, 
+                default_arc_color);
+            it
+              .filled_circle(
+                halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + endAngle) * id(pi).state / 180),
+                halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + endAngle) * id(pi).state / 180), 
+                5, 
+                id(very_dark_grey_color));
+
+            for (int i = startAngle; i <= startAngle + firstStepAngle; i++) {
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + i) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  default_arc_color);
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  default_arc_color);
+            }
+            for (int i = startAngle + firstStepAngle; i <= startAngle + secondStepAngle; i++) {
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + i) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(white_color));
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(white_color));
+            }
+            for (int i = startAngle + secondStepAngle; i <= startAngle + endAngle; i++) {
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + i) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(very_dark_grey_color));
+              it
+                .filled_triangle(
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                  id(very_dark_grey_color));
+            }
+
+            // Current temperature round
+            it
+              .filled_circle(
+                halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + currentTemperatureCircleAngle) * id(pi).state / 180),
+                halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + currentTemperatureCircleAngle) * id(pi).state / 180), 
+                3, 
+                id(white_color));
+
+            // Start of the second step
+            if (firstStepAngle < secondStepAngle) {
+              it
+                .filled_circle(
+                  halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
+                  5, 
+                  id(white_color));
+              it
+                .filled_circle(
+                  halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
+                  2, 
+                  id(very_dark_grey_color));
+            } 
+
+            // Target temperature round
+            it
+              .filled_circle(
+                halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + targetTemperatureCircleAngle) * id(pi).state / 180),
+                halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + targetTemperatureCircleAngle) * id(pi).state / 180), 
+                7, 
+                id(very_dark_grey_color));
+            it
+              .filled_circle(
+                halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + targetTemperatureCircleAngle) * id(pi).state / 180),
+                halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + targetTemperatureCircleAngle) * id(pi).state / 180), 
+                5, 
+                id(white_color));
+      - id: ClimateSettingsPage
+        lambda: |- 
+          Color default_circle_color = id(dark_blue_color);
+
+          Color heat_on = default_circle_color;
+          Color cool_on = default_circle_color;
+          Color dry_on = default_circle_color;
+          Color auto_on = default_circle_color;
+          Color fan_on = default_circle_color;
+          Color power_off = default_circle_color;
+
+
+          float screenheight = it.get_height();
+          float screenwidth = it.get_width();
+          float halfscreenheight = screenheight / 2;
+          float halfscreenwidth = screenwidth / 2;
+
+          it.image(120, 120, background, ImageAlign::CENTER);
+
+          if (id(climatedevice).state == "cool")
+          {
+              // cooling
+              cool_on = light_blue_color;
+          }
+          else if (id(climatedevice).state == "heat")
+          {
+              // heating
+              heat_on = light_red_color;
+          }
+          else if (id(climatedevice).state == "auto")
+          { 
+              // auto heat or cool
+              auto_on = light_orange_color;
+          }
+          else if (id(climatedevice).state == "fan_only")
+          {
+              // fan only
+              fan_on =  light_orange_color;
+          }
+          else if (id(climatedevice).state == "dry")
+          {
+              // dry
+              dry_on = mid_green_color;
+          }
+          else
+          {
+            power_off = light_blue_color;
+          }
+
+          it.filled_circle(55, 85, 30, auto_on);  // Circle 5
+          it.image(55, 85, ac_heatcool_40, ImageAlign::CENTER);
+
+          it.filled_circle(120, 85, 30, cool_on);  // Circle 4
+          it.image(120, 85, ac_cool_40, ImageAlign::CENTER);
+
+          it.filled_circle(185, 85, 30, heat_on);  // Circle 2
+          it.image(185, 85, ac_heat_40, ImageAlign::CENTER);
+
+          it.filled_circle(55, 155, 30, dry_on);  // Circle 3
+          it.image(55, 155, ac_dry_40, ImageAlign::CENTER);
+
+          it.filled_circle(120, 155, 30, fan_on);   // Circle 6
+          it.image(120, 155, fan_menu_icon, ImageAlign::CENTER);
+
+          it.filled_circle(185, 155, 30, power_off);  // Central Circle
+          it.image(185, 155, powercycle, ImageAlign::CENTER);
+      - id: CoverPage
+        lambda: |-
+            float screenheight = it.get_height();
+            float screenwidth = it.get_width();
+            float halfscreenheight = screenheight / 2;
+            float halfscreenwidth = screenwidth / 2;
+
+            it.image(120, 120, background, ImageAlign::CENTER);
+            int centerX = 120;  // X-coordinate of the circle center
+            int centerY = 120;  // Y-coordinate of the circle center
+
+            float currentCoverCircleAngle = (360 - id(climate_bottom_gauge_angle).state) * (id(new_cover_position).state / 100);
+            float targetCoverCircleAngle = (360 - id(climate_bottom_gauge_angle).state) * (id(cover_current_position).state / 100);
+              
+            float startAngle = id(climate_bottom_gauge_angle).state / 2;
+            float firstStepAngle = (currentCoverCircleAngle < targetCoverCircleAngle) ? currentCoverCircleAngle : targetCoverCircleAngle;
+            float secondStepAngle = (currentCoverCircleAngle > targetCoverCircleAngle) ? firstStepAngle : targetCoverCircleAngle;
+            float endAngle = 360 - id(climate_bottom_gauge_angle).state;
+
+            // Display temperature arc circle
+            it
+              .filled_circle(
+                halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle) * id(pi).state / 180),
+                halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle) * id(pi).state / 180), 
+                5, 
+                id(light_orange_color));
+            it
+              .filled_circle(
+                halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + endAngle) * id(pi).state / 180),
+                halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + endAngle) * id(pi).state / 180), 
+                5, 
+                id(very_dark_grey_color));
+
+
+            for (int i = startAngle; i <= startAngle + firstStepAngle; i++) {
+                it
+                  .filled_triangle(
+                    halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 5) * cos((90 + i) * id(pi).state / 180), 
+                    halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                    halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                    id(light_yellow_color));
+                it
+                  .filled_triangle(
+                    halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                    halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                    id(light_yellow_color));
+              }
+
+            for (int i = startAngle + firstStepAngle; i <= startAngle + secondStepAngle; i++) {
+                it
+                  .filled_triangle(
+                    halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 5) * cos((90 + i) * id(pi).state / 180), 
+                    halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                    halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                    id(light_grey_color));
+                it
+                  .filled_triangle(
+                    halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                    halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                    id(light_grey_color));
+              }
+              for (int i = startAngle + secondStepAngle; i <= startAngle + endAngle; i++) {
+                it
+                  .filled_triangle(
+                    halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 5) * cos((90 + i) * id(pi).state / 180), 
+                    halfscreenheight + (halfscreenheight - 5) * sin((90 + i) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                    halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                    id(very_dark_grey_color));
+                it
+                  .filled_triangle(
+                    halfscreenwidth + (halfscreenwidth - 15) * cos((90 + i) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 15) * sin((90 + i) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 5) * cos((90 + (i + 1)) * id(pi).state / 180), 
+                    halfscreenheight + (halfscreenheight - 5) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                    halfscreenwidth + (halfscreenwidth - 15) * cos((90 + (i + 1)) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 15) * sin((90 + (i + 1)) * id(pi).state / 180), 
+                    id(very_dark_grey_color));
+              }
+            
+            // Current temperature round
+              it
+                .filled_circle(
+                  halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + currentCoverCircleAngle) * id(pi).state / 180),
+                  halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + currentCoverCircleAngle) * id(pi).state / 180), 
+                  3, 
+                  id(white_color));
+
+              // Start of the second step
+              if (firstStepAngle < secondStepAngle) {
+                it
+                  .filled_circle(
+                    halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
+                    5, 
+                    id(white_color));
+                it
+                  .filled_circle(
+                    halfscreenwidth + (halfscreenwidth - 10) * cos((90 + startAngle + firstStepAngle) * id(pi).state / 180),
+                    halfscreenheight + (halfscreenheight - 10) * sin((90 + startAngle + firstStepAngle) * id(pi).state / 180), 
+                    2, 
+                    id(very_dark_grey_color));
+              } 
+
+            it.printf(halfscreenwidth, halfscreenheight, id(roboto24), TextAlign::CENTER, "%s", id(cover_status).state.c_str());
+            it.printf(halfscreenwidth, halfscreenheight + 30, id(roboto20), TextAlign::CENTER, "%0.f", id(new_cover_position).state);
+            // it.filled_circle(120, 200, 30, very_dark_grey_color);  // Central Circle
+            // it.image(120, 200, powercycle, ImageAlign::CENTER);
+
+qr_code:
+  - id: homepage_qr
+    value: esphome.io
 
 binary_sensor:
   - platform: touchscreen
-    name: Top Left Touch Quadrant
-    x_min: 0
-    x_max: 119
-    y_min: 0
-    y_max: 119
+    name: "Central Circle Touch"
+    x_min: 90   # Center x - radius
+    x_max: 150  # Center x + radius
+    y_min: 90   # Center y - radius
+    y_max: 150  # Center y + radius
+    page_id: TestPage
     on_press:
-      - if:
-          condition: 
-            - display.is_displaying_page: MenuPage
-          then:
-            - display.page.show: page3
-          else:
-            - display.page.show: MenuPage
+      - display.page.show: FirstPage
   - platform: touchscreen
-    name: Top Right Touch Quadrant
-    x_min: 120
-    x_max: 240
-    y_min: 0
-    y_max: 119
-    page_id: MenuPage
+    name: "Circle 2 Touch"
+    x_min: 160  # Center x - radius
+    x_max: 220  # Center x + radius
+    y_min: 90   # Center y - radius
+    y_max: 150  # Center y + radius
+    page_id: TestPage
     on_press:
-      - display.page.show: page1
+      - display.page.show: CoverPage
   - platform: touchscreen
-    name: Bottom Left Touch Quadrant
-    x_min: 0
-    x_max: 119
-    y_min: 120
-    y_max: 240
-    page_id: MenuPage
+    name: "Circle 3 Touch"
+    x_min: 125  # Center x - radius
+    x_max: 185  # Center x + radius
+    y_min: 151  # Center y - radius
+    y_max: 211  # Center y + radius
+    page_id: TestPage
     on_press:
-      - display.page.show: page3
+      - display.page.show: WifiQR
   - platform: touchscreen
-    name: Bottom Right Touch Quadrant
-    x_min: 120
-    x_max: 240
-    y_min: 120
-    y_max: 240
-    page_id: MenuPage
+    name: "Circle 4 Touch"
+    page_id: TestPage
+    x_min: 55   # Center x - radius
+    x_max: 115  # Center x + radius
+    y_min: 151  # Center y - radius
+    y_max: 211  # Center y + radius
     on_press:
-      - display.page.show: page2
+      then:
+        - logger.log: "Circle 4 Touched"
+  - platform: touchscreen
+    name: "Circle 5 Touch"
+    page_id: TestPage
+    x_min: 20   # Center x - radius
+    x_max: 80   # Center x + radius
+    y_min: 90   # Center y - radius
+    y_max: 150  # Center y + radius
+    on_press:
+      then:
+        - logger.log: "Circle 5 Touched"
+  - platform: touchscreen
+    name: "Circle 6 Touch"
+    page_id: TestPage
+    x_min: 55   # Center x - radius
+    x_max: 115  # Center x + radius
+    y_min: 29   # Center y - radius
+    y_max: 89   # Center y + radius
+    on_press:
+      - delay: 15ms
+      - display.page.show: AirConPage
+  - platform: touchscreen
+    name: "Circle 7 Touch"
+    page_id: TestPage
+    x_min: 125  # Center x - radius
+    x_max: 185  # Center x + radius
+    y_min: 29   # Center y - radius
+    y_max: 89   # Center y + radius
+    on_press:
+      then:
+        - logger.log: "Circle 7 Touched"
+  - platform: touchscreen
+    name: "LightPowerTouch"
+    page_id: FirstPage
+    x_min: 50  # Center x - radius
+    x_max: 190  # Center x + radius
+    y_min: 50   # Center y - radius
+    y_max: 190   # Center y + radius
+    on_press:
+      then:
+        - logger.log: "Light Power Touched"
+        - homeassistant.service:
+                service: light.toggle
+                data:
+                  entity_id: $light_control
+  - platform: touchscreen
+    name: "ClimateSelection"   
+    x_min: 50  # Center x - radius
+    x_max: 190  # Center x + radius
+    y_min: 50  # Center y - radius
+    y_max: 190   # Center y + radius
+    page_id: AirConPage
+    on_press:
+      - display.page.show: ClimateSettingsPage
+  
+  - platform: touchscreen
+    name: "Climate Auto Touch"
+    x_min: 40   # Center x - radius
+    x_max: 70  # Center x + radius
+    y_min: 60  # Center y - radius
+    y_max: 100  # Center y + radius
+    page_id: ClimateSettingsPage
+    on_press:
+      - homeassistant.service:
+          service: climate.set_hvac_mode
+          data:
+            entity_id: $climate_control
+            hvac_mode: "heat_cool"
+      - component.update: my_lcd
+  
+  - platform: touchscreen
+    name: "Climate Cool Touch"
+    x_min: 105   # Center x - radius
+    x_max: 135  # Center x + radius
+    y_min: 60  # Center y - radius
+    y_max: 100  # Center y + radius
+    page_id: ClimateSettingsPage
+    on_press:
+      - homeassistant.service:
+          service: climate.set_hvac_mode
+          data:
+            entity_id: $climate_control
+            hvac_mode: "cool"
+      - component.update: my_lcd
+  
+  - platform: touchscreen
+    name: "Climate Heat Touch"
+    x_min: 170   # Center x - radius
+    x_max: 200  # Center x + radius
+    y_min: 60  # Center y - radius
+    y_max: 100  # Center y + radius
+    page_id: ClimateSettingsPage
+    on_press:
+      - homeassistant.service:
+          service: climate.set_hvac_mode
+          data:
+            entity_id: $climate_control
+            hvac_mode: "heat"
+      - component.update: my_lcd
+
+  - platform: touchscreen
+    name: "Climate Power Off Touch"
+    x_min: 160   # Center x - radius
+    x_max: 200  # Center x + radius
+    y_min: 140  # Center y - radius
+    y_max: 170  # Center y + radius
+    page_id: ClimateSettingsPage
+    on_press:
+      - homeassistant.service:
+          service: climate.set_hvac_mode
+          data:
+            entity_id: $climate_control
+            hvac_mode: "off"
+      - component.update: my_lcd
+
   - platform: gpio
     pin: GPIO42
-    name: "BacklightButton"
+    name: "BacklightButton" 
     on_press:
-        - if:
-            condition:
-              - display.is_displaying_page: page1
-            then:
-              - homeassistant.service:
-                  service: light.toggle
-                  data:
-                    entity_id: light.great_room_dimmer_4
-              - component.update: my_lcd
-        - if:
-            condition:
-              - display.is_displaying_page: page2
-            then:
-              if: 
-                condition:
-                    lambda: return id(climatedevice).state == "off";
-                then:
-                  - homeassistant.service:
-                      service: climate.turn_on
-                      data:
-                        entity_id: climate.doris
-                else:
-                  - homeassistant.service:
-                      service: climate.turn_off
-                      data:
-                        entity_id: climate.doris
-        - if:
-            condition:
-              - display.is_displaying_page: page3
-            then:
-              if:
-                condition:
-                  lambda: return id(mediaplayermute).state == "off";
-                then:
-                  - logger.log: 
-                      format: "The mediaplayer sensor reports value %s"
-                      args: [ 'id(mediaplayermute).state' ]
-                  - homeassistant.service:
-                     service: media_player.volume_mute
-                     data:
-                      entity_id: media_player.living_room
-                      is_volume_muted: 'true'
-                else:
-                  - logger.log: 
-                      format: "The mediaplayer sensor reports value %s"
-                      args: [ 'id(mediaplayermute).state' ]
-                  - homeassistant.service:
-                     service: media_player.volume_mute
-                     data:
-                      entity_id: media_player.living_room
-                      is_volume_muted: 'false'
-              
+      - if:
+          condition:
+            display.is_displaying_page: ClimateSettingsPage
+          then:
+            - display.page.show: AirConPage
+          else:
+            - display.page.show: TestPage
+
   - platform: ld2410
     has_target:
       name: Presence
@@ -527,9 +1019,68 @@ binary_sensor:
       name: Still Target
 
 sensor:
+  - platform: homeassistant
+    id: climate_target_temperature
+    entity_id: $climate_control
+    attribute: temperature
+    on_value:
+      then:
+        - component.update: my_lcd
+
+  - platform: homeassistant
+    id: cover_current_position
+    entity_id: $cover_control
+    attribute: current_position
+    on_value:
+      if:
+        condition:
+          not:
+            - script.is_running: my_cover_script
+        then:
+            - lambda: 'id(new_cover_position).publish_state(x);'
+            - component.update: my_lcd
+
+  - platform: homeassistant
+    id: climate_new_temperature
+    entity_id: $climate_control
+    attribute: temperature
+    on_value:
+      if:
+        condition:
+          not:
+            - script.is_running: my_climate_temperature_script
+        then:
+            - lambda: 'id(temperature_new_setpoint).publish_state(x);'
+            - component.update: my_lcd
+
+  - platform: homeassistant
+    id: climate_current_temperature
+    entity_id: $climate_control
+    attribute: current_temperature
+    on_value:
+      then:
+        - component.update: my_lcd
+
+  - platform: homeassistant
+    id: climate_min_temperature
+    entity_id: $climate_control
+    attribute: min_temp
+    on_value:
+      then:
+        - component.update: my_lcd
+
+  - platform: homeassistant
+    id: climate_max_temperature
+    entity_id: $climate_control
+    attribute: max_temp
+    on_value:
+      then:
+        - component.update: my_lcd
+
   - platform: rotary_encoder
     name: "Rotary Encoder"
     id: rotaryencoder
+    resolution: 1
     pin_a: 
       number: GPIO40
       mode:
@@ -541,87 +1092,90 @@ sensor:
        input: true
        pullup: true
     accuracy_decimals: 1
-    #on_value:
-    #  - component.update: my_lcd
-    on_clockwise: 
+    on_clockwise:
       - if:
           condition:
-            - display.is_displaying_page: page1
+            - display.is_displaying_page: AirConPage
           then:
-            - homeassistant.service:
-                service: light.turn_on
-                data:
-                  entity_id: light.great_room_dimmer_4
-                  brightness: !lambda int brightness = id(dimmersensor_brightness).state + 35; return brightness;
-            - component.update: my_lcd
+            - lambda: 'id(temperature_new_setpoint).publish_state(id(temperature_new_setpoint).state + 1);'
+            - component.update: my_lcd 
+            - script.execute: my_climate_temperature_script
+
       - if:
           condition:
-            - display.is_displaying_page: page2
+            - display.is_displaying_page: CoverPage
           then:
-            - homeassistant.service:
-                service: climate.set_temperature
-                data:
-                  entity_id: climate.doris
-                  temperature: !lambda return (id(climatedevice_setpoint).state + 1);
-            - component.update: my_lcd
+            - lambda: |-
+                int newvalue = id(new_cover_position).state;
+                if (newvalue > 94) {
+                  id(new_cover_position).publish_state(100); }
+                else {
+                  id(new_cover_position).publish_state(id(new_cover_position).state + 5); }
+            - component.update: my_lcd 
+            - script.execute: my_cover_script      
+
       - if:
           condition:
-            - display.is_displaying_page: page3
+            - display.is_displaying_page: FirstPage
           then:
-            - homeassistant.service:
-                service: media_player.volume_up
-                data:
-                  entity_id: media_player.living_room
+            - lambda: |-
+                int newvalue = id(new_light_brightness).state;
+                if (newvalue > 245) {
+                  id(new_light_brightness).publish_state(255); }
+                else {
+                  id(new_light_brightness).publish_state(id(new_light_brightness).state + 10); }
             - component.update: my_lcd
+            - script.execute: my_light_brightness_script
+            
+            
     on_anticlockwise:
       - if:
           condition:
-            - display.is_displaying_page: page1
+            - display.is_displaying_page: AirConPage
           then:
-            - homeassistant.service:
-                service: light.turn_on
-                data:
-                  entity_id: light.great_room_dimmer_4
-                  brightness: !lambda int brightness = id(dimmersensor_brightness).state - 35; return brightness;
-            - component.update: my_lcd        
+            - lambda: 'id(temperature_new_setpoint).publish_state(id(temperature_new_setpoint).state - 1);'
+            - script.execute: my_climate_temperature_script
+            - component.update: my_lcd
+
       - if:
           condition:
-            - display.is_displaying_page: page2
+            - display.is_displaying_page: CoverPage
           then:
-            - homeassistant.service:
-                service: climate.set_temperature
-                data:
-                  entity_id: climate.doris
-                  temperature: !lambda return (id(climatedevice_setpoint).state - 1);
-            - component.update: my_lcd
+            - lambda: |-
+                int newvalue = id(new_cover_position).state;
+                if (newvalue < 6) {
+                  id(new_cover_position).publish_state(0); }
+                else {
+                  id(new_cover_position).publish_state(id(new_cover_position).state - 5); }
+            - component.update: my_lcd 
+            - script.execute: my_cover_script  
+            
       - if:
           condition:
-            - display.is_displaying_page: page3
+            - display.is_displaying_page: FirstPage
           then:
-            - homeassistant.service:
-                service: media_player.volume_down
-                data:
-                  entity_id: media_player.living_room
+            - lambda: |-
+                int newvalue = id(new_light_brightness).state;
+                if (newvalue < 10) {
+                  id(new_light_brightness).publish_state(0); }
+                else {
+                  id(new_light_brightness).publish_state(id(new_light_brightness).state - 10); }
+            - script.execute: my_light_brightness_script
             - component.update: my_lcd
+            
+            
 
   - platform: homeassistant
     name: "Media Volume"
     id: "beam_volume"
     entity_id: media_player.living_room
     attribute: volume_level
-    on_value:
-      - if:
-          condition:
-            - display.is_displaying_page: page3
-          then:
-           - sensor.rotary_encoder.set_value:
-              id: rotaryencoder
-              value: !lambda 'return id(beam_volume).state;'
-      - component.update: my_lcd
   - platform: ld2410
     detection_distance:
       name: Detection Distance
       id: ddistance
+      filters:
+        - throttle: 0.5s
       on_value: 
         then:
           if:
@@ -636,7 +1190,7 @@ sensor:
             else:
               - light.turn_off: 
                   id: backlight
-                  transition_length: 1s           
+                  transition_length: 1s     
     light:
       name: light
     moving_distance:
@@ -647,41 +1201,91 @@ sensor:
       name: Move Energy
     still_energy:
       name: Still Energy
+    g0:
+        move_energy:
+          name: g0 move energy
+        still_energy:
+          name: g0 still energy
+    g1:
+      move_energy:
+        name: g1 move energy
+      still_energy:
+        name: g1 still energy
+    g2:
+      move_energy:
+        name: g2 move energy
+      still_energy:
+        name: g2 still energy
+    g3:
+      move_energy:
+        name: g3 move energy
+      still_energy:
+        name: g3 still energy
+    g4:
+      move_energy:
+        name: g4 move energy
+      still_energy:
+        name: g4 still energy
+    g5:
+      move_energy:
+        name: g5 move energy
+      still_energy:
+        name: g5 still energy
+    g6:
+      move_energy:
+        name: g6 move energy
+      still_energy:
+        name: g6 still energy
+    g7:
+      move_energy:
+        name: g7 move energy
+      still_energy:
+        name: g7 still energy
+    g8:
+      move_energy:
+        name: g8 move energy
+      still_energy:
+        name: g8 still energy
+          
+         
+
+
   - platform: homeassistant
     name: "Dimmer Light Brightness"
     id: "dimmersensor_brightness"
-    entity_id: light.great_room_dimmer_4
+    entity_id: $light_control
     attribute: brightness
     on_value:
-      - if:
-          condition:
-            - display.is_displaying_page: page1
-          then:
-           - sensor.rotary_encoder.set_value:
-              id: rotaryencoder
-              value: !lambda return (id(dimmersensor_brightness).state / 255) * 100;
-      - component.update: my_lcd    
+      if:
+        condition:
+          not:
+            - script.is_running: my_light_brightness_script
+        then:
+          - lambda: 'id(new_light_brightness).publish_state(x);'
+          - component.update: my_lcd
+
   - platform: homeassistant
     name: "Climate Device Current Temperature"
     id: "climatedevice_currenttemp"
-    entity_id: climate.doris
+    entity_id: $climate_control
     attribute: current_temperature
     on_value:
-      - if:
-          condition:
-            - display.is_displaying_page: page2
-          then:
-           - sensor.rotary_encoder.set_value:
-              id: rotaryencoder
-              value: !lambda return id(climatedevice_currenttemp).state;
       - component.update: my_lcd
+     
   - platform: homeassistant
     name: "Climate Device Setpoint"
     id: "climatedevice_setpoint"
-    entity_id: climate.doris
+    entity_id: $climate_control
     attribute: temperature
     on_value:
-      - component.update: my_lcd
+       if:
+        condition:
+          not:
+            - script.is_running: my_climate_temperature_script
+        then:
+            - lambda: 'id(temperature_new_setpoint).publish_state(x);'
+            - component.update: my_lcd
+
   - platform: homeassistant
     name: "Room Lux Sensor"
     id: luxsensor
@@ -724,7 +1328,6 @@ output:
   - id: oledbacklight
     platform: ledc
     pin: GPIO9
-    #pin: GPIO21
     max_power: 1
     min_power: 0
   - platform: ledc
@@ -739,6 +1342,19 @@ switch:
       name: "control bluetooth"
 
 text_sensor:
+  - platform: homeassistant
+    id: "cover_status"
+    entity_id: $cover_control
+    filters:
+    - map:
+      - open -> Open
+      - closed -> closed
+      - opening -> Opening
+      - closing -> Closing
+    on_value: 
+      then:
+        - component.update: my_lcd
+
   - platform: ld2410
     version:
       name: "firmware version"
@@ -747,49 +1363,25 @@ text_sensor:
   - platform: homeassistant
     name: "Dimmer Light Sensor"
     id: "dimmersensor"
-    entity_id: light.great_room_dimmer_4
+    entity_id: $light_control
     filters:
       - to_upper:
-    on_value:
-      - if:
-          condition:
-            - display.is_displaying_page: page1
-          then:
-            - component.update: my_lcd
   - platform: homeassistant
     name: "Climate Device"
     id: "climatedevice"
-    entity_id: climate.doris
+    entity_id: $climate_control
     filters:
     - map:
       - heat_cool -> auto
-    on_value:
-      - if:
-          condition:
-            - display.is_displaying_page: page2
-          then:
-            - component.update: my_lcd 
   - platform: homeassistant
     name: "Media Player Mute"
     id: "mediaplayermute"
     entity_id: media_player.living_room
     attribute: is_volume_muted
-    on_value:
-      - if:
-          condition:
-            - display.is_displaying_page: page3
-          then:
-            - component.update: my_lcd
   - platform: homeassistant
     name: "Zones Open"
     id: "zones_open"
     entity_id: sensor.ac_zones_open
-    on_value:
-      - if:
-          condition:
-            - display.is_displaying_page: page2
-          then:
-            - component.update: my_lcd
   - platform: template
     name: "RTC Sensor"
     id: template_text
@@ -797,3 +1389,4 @@ text_sensor:
     ip_address:
       name: ESP IP Address
       id: espip
+    
