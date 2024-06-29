@@ -1,0 +1,458 @@
+esphome:
+  name: m4dial
+  friendly_name: M4Dial
+  on_boot: 
+    priority: 600
+    then:
+      - light.turn_on: backlight
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+external_components:
+ - source: github://clydebarrow/esphome@lvgl
+   refresh: 10min
+   components: [ lvgl ]
+
+# Enable logging
+logger:
+  level: DEBUG
+
+api:
+  encryption:
+    key: !secret m4dialencryption
+  on_client_connected:
+    - if:
+        condition:
+          lambda: 'return (0 == client_info.find("Home Assistant "));'
+        then:
+          - delay: 1s
+          - lvgl.widget.hide: boot_screen
+ota:
+  platform: esphome
+  password: !secret m4dialotapassword
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "M5Dial Fallback Hotspot"
+    password: !secret m4fallbackpassword
+
+captive_portal:
+
+substitutions:
+  # Add the ids of the devices you want to control here
+  light_control: light.great_room_dimmer_4
+  climate_control: climate.doris
+  cover_control: cover.bridget_s_blind
+
+<<: !include common/colors.yaml
+<<: !include common/images.yaml
+
+i2c:
+  - id: bus_internal
+    sda: GPIO11
+    scl: GPIO12
+    scan: False
+
+touchscreen:
+  platform: ft5x06
+  address: 0x38
+  id: my_touchscreen
+  on_release:
+    - if:
+        condition: lvgl.is_paused
+        then:
+          - logger.log: "LVGL resuming"
+          - lvgl.resume:
+          - lvgl.widget.redraw:
+          - light.turn_on: backlight
+
+uart:
+  tx_pin: GPIO2
+  rx_pin: GPIO1
+  baud_rate: 256000
+  parity: NONE
+  stop_bits: 1
+
+spi:
+  mosi_pin: GPIO5
+  clk_pin: GPIO6
+
+display:
+  - platform: ili9xxx
+    model: gc9a01a
+    auto_clear_enabled: False
+    update_interval: never
+    reset_pin: GPIO8
+    id: my_lcd
+    cs_pin: GPIO7
+    dc_pin: GPIO4
+    dimensions: 
+      height: 240
+      width: 240
+
+binary_sensor:
+  - platform: gpio
+    pin: GPIO42
+    id: backlightbutton
+  - platform: homeassistant
+    id: remote_light
+    entity_id: $light_control
+    publish_initial_state: true
+    on_state:
+      then:
+        lvgl.widget.update:
+          id: light_btn
+          state:
+            checked: !lambda return x;
+
+number:
+  - platform: template
+    name: LVGL Screen timeout
+    optimistic: true
+    id: display_timeout
+    unit_of_measurement: "s"
+    initial_value: 45
+    restore_value: true
+    min_value: 10
+    max_value: 180
+    step: 5
+    mode: box
+
+sensor:
+  - platform: rotary_encoder
+    name: "Rotary Encoder"
+    id: rotaryencoder
+    resolution: 1
+    pin_a: 
+      number: GPIO40
+      mode:
+       input: true
+       pullup: true
+    pin_b: 
+      number: GPIO41
+      mode:
+       input: true
+       pullup: true
+    accuracy_decimals: 1
+    on_anticlockwise:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - logger.log: "LVGL resuming"
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on: backlight
+      - lvgl.page.previous:
+          animation: OVER_LEFT
+          time: 250ms
+    on_clockwise: 
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - logger.log: "LVGL resuming"
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on: backlight
+      - lvgl.page.next:
+          animation: OVER_RIGHT
+          time: 250ms
+  - platform: homeassistant
+    id: light_brightness
+    entity_id: $light_control
+    attribute: brightness
+    on_value:
+      - lvgl.arc.update:
+          id: arc_id
+          value: !lambda return x;
+      - lvgl.label.update:
+          id: brightness_label
+          text:
+            format: "%d%%"
+            args: [ 'map(x,0,255,0,100)' ]
+  - platform: homeassistant
+    id: cover_status
+    entity_id: $cover_control
+    attribute: current_position
+    on_value: 
+      then:
+        - lvgl.arc.update:
+            id: cover_arc
+            value: !lambda return x;
+        - lvgl.label.update:
+            id: current_cover_percentage
+            text:
+              format: "%d%%"
+              args: [ 'map(x,0,100,0,100)' ]
+  - platform: homeassistant
+    id: cover_state
+    entity_id: $cover_control
+  - platform: homeassistant
+    id: light_state
+    entity_id: $light_control
+  - platform: homeassistant
+    id: climate_device_setpoint
+    entity_id: $climate_control
+    attribute: temperature
+    on_value:
+      - lvgl.spinbox.update:
+          id: spinbox_id
+          value: !lambda return x;
+
+text_sensor:
+  - platform: homeassistant
+    id: climate_device
+    entity_id: $climate_control
+    filters:
+      - map:
+        - heat_cool -> Auto
+        - heat -> Heat
+        - cool -> Cool
+        - dry -> Dry
+        - fan -> Fan
+        - off -> Off
+    on_value: 
+      then:
+        lvgl.label.update:
+          id: current_temp_label
+          text: !lambda return x.c_str();
+
+light:
+  - platform: monochromatic
+    id: backlight
+    name: "Backlight"
+    output: oledbacklight
+    default_transition_length: 250ms
+
+output:
+  - id: oledbacklight
+    platform: ledc
+    pin: GPIO9
+    max_power: 1
+    min_power: 0.1
+
+image:
+  - file: https://esphome.io/_static/favicon-512x512.png
+    id: boot_logo
+    resize: 100x100
+    type: RGB565
+    use_transparency: true
+
+lvgl:
+  on_idle:
+    timeout: !lambda "return (id(display_timeout).state * 1000);"
+    then:
+      - logger.log: "LVGL is idle"
+      - light.turn_off: backlight
+      - lvgl.pause:
+  top_layer:
+    widgets:
+      # make sure it's the last one in this list:
+      - obj:
+          id: boot_screen
+          x: 0
+          y: 0
+          width: 100%
+          height: 100%
+          bg_color: 0x000000
+          bg_opa: COVER
+          radius: 0
+          pad_all: 0
+          border_width: 0
+          widgets:
+            - img:
+                align: CENTER
+                src: boot_logo
+                y: -20
+            - spinner:
+                align: CENTER
+                y: 65
+                height: 50
+                width: 50
+                spin_time: 1s
+                arc_length: 60deg
+                arc_width: 8
+                indicator:
+                  arc_color: 0x18bcf2
+                  arc_width: 8
+          on_press:
+            - lvgl.widget.hide: boot_screen
+  rotary_encoders:
+    sensor: rotaryencoder
+    enter_button: backlightbutton
+    group: control_group
+  theme:
+    arc:
+      arc_color: very_dark_grey_color
+      knob:
+        bg_color: dark_orange_color
+      indicator:
+        arc_color: mid_orange_color
+        arc_width: 16
+    btn:
+      text_font: montserrat_18
+      bg_color: very_dark_grey_color
+      checked:
+        bg_color: ice_orange_color
+    label:
+      text_font: montserrat_18
+      text_color: white_color
+  displays:
+    - my_lcd
+  touchscreens:
+    - my_touchscreen
+  pages:
+    - id: lightpage
+      bg_color: 0x000000
+      widgets:
+        - label:
+            id: brightness_label
+            align: CENTER
+            text: ""
+        - arc:
+            width: 200
+            height: 200
+            align: CENTER
+            group: control_group
+            arc_width: 16
+            id: arc_id
+            value: 0
+            min_value: 0
+            max_value: 255
+            adjustable: true
+            on_release:
+                - homeassistant.service:
+                    service: light.turn_on
+                    data:
+                      entity_id: $light_control
+                      brightness: !lambda return int(x);
+        - btn:
+              id: light_btn
+              align: CENTER
+              y: 70
+              width: 50
+              height: 50
+              radius: 3000
+              checkable: true
+              widgets:
+                - label:
+                    align: CENTER
+                    text: "\uF011"
+              on_click:
+                - homeassistant.service:
+                    service: light.toggle
+                    data:
+                      entity_id: $light_control
+    - id: climatepage
+      bg_color: 0x000000
+      widgets:
+        - label:
+            id: current_temp_label
+            align: CENTER
+            text: "CLIMATE"
+            y: 70
+        - obj:
+              align: CENTER
+              y: 0
+              layout:
+                type: FLEX
+                flex_flow: ROW
+                flex_align_cross: CENTER
+              width: SIZE_CONTENT
+              height: SIZE_CONTENT
+              widgets:
+                - btn:
+                    id: spin_down
+                    on_click:
+                      - lvgl.spinbox.decrement: spinbox_id
+                    widgets:
+                      - label:
+                           text: "-"
+                - spinbox:
+                    id: spinbox_id
+                    align: CENTER
+                    text_align: CENTER
+                    width: 50
+                    range_from: 17
+                    range_to: 35
+                    step: 1
+                    rollover: false
+                    digits: 2
+                    decimal_places: 0
+                    on_value:
+                      then:
+                        - homeassistant.service:
+                            service: climate.set_temperature
+                            data:
+                              temperature: !lambda return x;
+                              entity_id: $climate_control
+                - btn:
+                    id: spin_up
+                    on_click:
+                      - lvgl.spinbox.increment: spinbox_id
+                    widgets:
+                      - label:
+                          text: "+"
+    - id: coverpage
+      bg_color: 0x000000
+      widgets:
+        - label:
+            y: 70
+            id: current_cover_percentage
+            align: CENTER
+            text: "Sunshade"
+        - arc:
+            width: 200
+            height: 200
+            align: CENTER
+            group: control_group
+            arc_width: 16
+            id: cover_arc
+            value: 0
+            min_value: 0
+            max_value: 100
+            adjustable: true
+            on_release:
+              - homeassistant.service:
+                  service: cover.set_cover_position
+                  data:
+                    entity_id: $cover_control
+                    position: !lambda return int(x);
+        - btn:
+            x: -30
+            width: 50
+            height: 50
+            radius: 3000
+            id: cover_down_btn
+            align: CENTER
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "\uF078"
+            on_press:
+              - homeassistant.service:
+                  service: cover.close_cover
+                  data:
+                    entity_id: $cover_control
+        - btn:
+            x: 30
+            width: 50
+            height: 50
+            radius: 3000
+            id: cover_up_btn
+            align: CENTER
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "\uF077"
+            on_press:
+              - homeassistant.service:
+                  service: cover.open_cover
+                  data:
+                    entity_id: $cover_control
