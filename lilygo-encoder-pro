@@ -1,0 +1,295 @@
+esphome:
+  name: lily
+  friendly_name: lily
+  includes:
+    - custom_components/chsc5816/TouchDrvCHSC5816.hpp
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+external_components:
+ - source: github://clydebarrow/esphome@lvgl
+   refresh: 10min
+   components: [ lvgl ]
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "[secret code here]"
+
+ota:
+  - platform: esphome
+    password: "[secret code here]"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Lily Fallback Hotspot"
+    password: "[secret code here]"
+
+captive_portal:
+
+substitutions:
+  # Add the ids of the devices you want to control here
+  light_control: light.great_room_dimmer_4
+  climate_control: climate.doris
+  cover_control: cover.bridget_s_blind
+
+<<: !include common/colors.yaml
+<<: !include common/images.yaml
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: 0
+      inverted: false
+    id: button_a
+    on_press:
+      then:
+        - logger.log: "pressed"
+  - platform: homeassistant
+    id: remote_light
+    entity_id: $light_control
+    publish_initial_state: true
+    on_state:
+      then:
+        lvgl.widget.update:
+          id: light_btn
+          state:
+            checked: !lambda return x;
+
+number:
+  - platform: template
+    name: LVGL Screen timeout
+    optimistic: true
+    id: display_timeout
+    unit_of_measurement: "s"
+    initial_value: 45
+    restore_value: true
+    min_value: 10
+    max_value: 180
+    step: 5
+    mode: box
+
+sensor:
+  - platform: rotary_encoder
+    name: "Rotary Encoder"
+    id: rotaryencoder
+    resolution: 1
+    pin_a: 
+      number: 1
+    pin_b: 
+      number: 2
+  - platform: homeassistant
+    id: light_brightness
+    entity_id: $light_control
+    attribute: brightness
+    on_value:
+      - lvgl.arc.update:
+          id: arc_id
+          value: !lambda return x;
+      - lvgl.label.update:
+          id: brightness_label
+          text:
+            format: "%d%%"
+            args: [ int(x)  ]
+  - platform: homeassistant
+    id: cover_status
+    entity_id: $cover_control
+    attribute: current_position
+  - platform: homeassistant
+    id: cover_state
+    entity_id: $cover_control
+  - platform: homeassistant
+    id: light_state
+    entity_id: $light_control
+  - platform: homeassistant
+    id: climate_device_setpoint
+    entity_id: $climate_control
+    attribute: temperature
+
+text_sensor:
+  - platform: homeassistant
+    id: climate_device
+    entity_id: $climate_control
+    filters:
+      - map:
+        - heat_cool -> Auto
+        - heat -> Heat
+        - cool -> Cool
+        - dry -> Dry
+        - fan -> Fan
+        - off -> Off
+
+i2c:
+  id: standardi2c
+  sda: 5
+  scl: 6
+  scan: True
+
+touchscreen:
+  - platform: cst816
+    address: 0x2E
+    id: my_touchscreen
+    reset_pin:
+      number: 8
+    interrupt_pin:
+      number: 9
+
+spi:
+  id: quad_spi
+  type: quad
+  clk_pin: 12
+  data_pins: [11, 13, 7, 14]
+
+display:
+  - platform: qspi_amoled
+    model: RM67162
+    id: main_lcd
+    dimensions:
+      height: 390
+      width: 390
+    color_order: rgb
+    brightness: 255
+    cs_pin: 10
+    reset_pin: 4
+    enable_pin: 3
+    auto_clear_enabled: false
+    update_interval: never
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+lvgl:
+  rotary_encoders:
+    sensor: rotaryencoder
+    enter_button: button_a
+    group: control_group
+  theme:
+    arc:
+      arc_color: very_dark_grey_color
+      knob:
+        bg_color: mid_orange_color
+      indicator:
+        arc_color: ice_orange_color
+        arc_width: 16
+    button:
+      width: 75
+      height: 75
+      radius: 3000
+      text_font: montserrat_30
+      bg_color: mid_orange_color
+      shadow_opa: TRANSP
+      checked:
+        bg_color: ice_orange_color
+      pressed:
+        bg_color: ice_orange_color
+    label:
+      text_font: montserrat_30
+      text_color: white_color
+  pages:
+    - id: menupage
+      bg_color: 0x000000
+      widgets:
+        - image:
+            height: 390
+            width: 390
+            align: CENTER
+            src: background
+        - obj:
+            align: CENTER
+            width: 300
+            height: 300
+            radius: 3000
+            bg_opa: TRANSP
+            border_opa: TRANSP
+            layout:
+              type: FLEX
+              flex_flow: ROW_WRAP
+              flex_align_cross: CENTER
+            widgets:
+              - button:
+                  group: control_group
+                  id: menu1
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text:  "\uF068"
+                  on_press:
+                    lvgl.page.show:
+                      id: lightpage   
+              - button:
+                  group: control_group
+                  id: menu2
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text:  "\uF067"
+                  on_press:
+                    lvgl.page.show:
+                      id: lightpage
+              - button:
+                  group: control_group
+                  id: menu3
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text:  "\uF093"
+    - id: lightpage
+      bg_color: 0x000000
+      widgets:
+        - image:
+            align: CENTER
+            src: background
+            height: 390
+            width: 390
+        - label:
+            id: brightness_label
+            align: CENTER
+            text: ""
+        - arc:
+            width: 350
+            height: 350
+            align: CENTER
+            arc_width: 16
+            id: arc_id
+            value: 0
+            min_value: 0
+            max_value: 255
+            adjustable: true
+            on_release:
+                - homeassistant.service:
+                    service: light.turn_on
+                    data:
+                      entity_id: $light_control
+                      brightness: !lambda return int(x);
+        - button:
+              id: light_btn
+              align: CENTER
+              y: 90
+              width: 75
+              height: 75
+              radius: 3000
+              checkable: true
+              group: control_group
+              on_long_press:
+                - lvgl.page.show:
+                    id: menupage
+              widgets:
+                - label:
+                    align: CENTER
+                    text: "\uF011"
+              on_click:
+                - homeassistant.service:
+                    service: light.toggle
+                    data:
+                      entity_id: $light_control
